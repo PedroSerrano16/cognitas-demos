@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Faturação — Demonstração COGNITAS</title>
+<meta name="description" content="Demonstração interativa: recebimentos e pagamentos agendados, emissão de faturas e comunicação à AT.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ── shared COGNITAS demo shell ──────────────────────────────
+   Inlined on purpose: these pages are opened straight from disk
+   as often as they are served, and Safari blocks file:// sub-
+   resources that traverse up a directory. Self-contained pages
+   work everywhere — served, double-clicked, or offline.
+   ──────────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   COGNITAS — shared demo shell
+   Design tokens lifted from cognitas.pt so the demos read as the
+   same product family. Dark-only by design (matches the site).
+   ══════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --black:     oklch(10% 0.008 55);
+  --dark:      oklch(12% 0.008 55);
+  --dark2:     oklch(15% 0.008 55);
+  --dark3:     oklch(18% 0.008 55);
+  --border:    oklch(19% 0.008 55);
+  --border-lt: oklch(24% 0.008 55);
+  --mid:       oklch(44% 0.008 55);
+  --mid-lt:    oklch(56% 0.008 55);
+  --light:     oklch(72% 0.008 55);
+  --white:     oklch(99% 0.004 55);
+
+  --accent:    oklch(45% 0.18 264);
+  --accent-br: oklch(58% 0.16 264);
+  --accent-dim:oklch(45% 0.18 264 / 0.12);
+
+  --ok:        oklch(58% 0.15 150);
+  --warn:      oklch(65% 0.15 65);
+  --bad:       oklch(58% 0.19 25);
+
+  /* Fallbacks matter: these pages are often opened straight from disk,
+     where the Google Fonts request may not resolve. */
+  --f-display: 'Outfit', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif;
+  --f-body:    'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --f-mono:    'DM Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+html { -webkit-font-smoothing: antialiased; }
+body {
+  font-family: var(--f-body);
+  background: var(--black);
+  color: var(--white);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── DEMO BANNER ────────────────────────────────────────────── */
+.demo-banner {
+  position: sticky; top: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 9px 20px;
+  background: oklch(30% 0.13 65); color: oklch(97% 0.02 65);
+  font-family: var(--f-mono); font-size: 10px;
+  letter-spacing: 0.16em; text-transform: uppercase;
+}
+.demo-banner a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.demo-banner-note { opacity: 0.75; letter-spacing: 0.1em; text-transform: none; font-size: 11px; }
+
+/* ── SHELL ──────────────────────────────────────────────────── */
+.shell { display: flex; min-height: calc(100vh - 36px); }
+
+.sidebar {
+  width: 224px; flex-shrink: 0;
+  background: var(--dark); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+}
+.side-brand { padding: 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+.side-brand-sup { font-family: var(--f-mono); font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mid); }
+.side-brand-name { font-family: var(--f-display); font-size: 14px; font-weight: 600; color: var(--white); margin-top: 2px; }
+.side-nav { flex: 1; padding: 14px 12px; display: flex; flex-direction: column; gap: 2px; }
+.side-link {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: 3px;
+  font-size: 13.5px; color: var(--mid); text-decoration: none;
+  cursor: pointer; transition: all 0.15s; border: none; background: none;
+  font-family: var(--f-body); text-align: left; width: 100%;
+}
+.side-link:hover { color: var(--light); background: var(--dark2); }
+.side-link.active { background: var(--accent-dim); color: var(--accent-br); }
+.side-foot { padding: 16px 20px; border-top: 1px solid var(--border); font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: oklch(34% 0.008 55); }
+
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.topbar {
+  height: 58px; flex-shrink: 0; padding: 0 28px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+}
+.topbar-title { font-family: var(--f-display); font-size: 16px; font-weight: 600; }
+.topbar-actions { display: flex; align-items: center; gap: 10px; }
+.content { padding: 28px; flex: 1; }
+
+/* ── LANG TOGGLE ────────────────────────────────────────────── */
+.lang-toggle { display: flex; border: 1px solid var(--border-lt); overflow: hidden; border-radius: 3px; }
+.lang-btn {
+  font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 5px 10px; cursor: pointer; border: none; background: none; color: var(--mid); transition: all 0.15s;
+}
+.lang-btn.active { background: var(--accent); color: var(--white); }
+
+/* ── TYPO ───────────────────────────────────────────────────── */
+.eyebrow { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mid); }
+.h-sec { font-family: var(--f-display); font-size: 15px; font-weight: 600; color: var(--white); }
+.muted { color: var(--mid); }
+.mono { font-family: var(--f-mono); }
+
+/* ── CARD ───────────────────────────────────────────────────── */
+.card { background: var(--dark); border: 1px solid var(--border); border-radius: 4px; }
+.card-head {
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.card-body { padding: 20px; }
+.card-body.flush { padding: 0; }
+
+/* ── STATS ──────────────────────────────────────────────────── */
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 2px; background: var(--border); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 24px; }
+.stat { background: var(--dark); padding: 20px 22px; }
+.stat-label { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mid); }
+.stat-num { font-family: var(--f-display); font-size: 30px; font-weight: 800; letter-spacing: -0.02em; margin-top: 8px; line-height: 1; }
+.stat-num.accent { color: var(--accent-br); }
+.stat-num.ok { color: var(--ok); }
+.stat-num.bad { color: var(--bad); }
+.stat-sub { font-size: 12px; color: var(--mid); margin-top: 6px; font-weight: 300; }
+
+/* ── PILLS ──────────────────────────────────────────────────── */
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px; border-radius: 3px;
+  font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
+  white-space: nowrap;
+}
+.pill::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.pill.mute { color: var(--mid-lt);   background: oklch(22% 0.008 55); }
+.pill.info { color: var(--accent-br); background: oklch(45% 0.18 264 / 0.14); }
+.pill.warn { color: var(--warn);      background: oklch(65% 0.15 65 / 0.13); }
+.pill.ok   { color: var(--ok);        background: oklch(58% 0.15 150 / 0.13); }
+.pill.bad  { color: var(--bad);       background: oklch(58% 0.19 25 / 0.13); }
+
+/* ── BUTTONS ────────────────────────────────────────────────── */
+.btn {
+  font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 10px 18px; border: none; border-radius: 3px; cursor: pointer;
+  transition: all 0.15s; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary { background: var(--accent); color: var(--white); }
+.btn-primary:hover:not(:disabled) { background: var(--accent-br); }
+.btn-ghost { background: none; color: var(--mid-lt); border: 1px solid var(--border-lt); }
+.btn-ghost:hover:not(:disabled) { color: var(--white); border-color: var(--mid); }
+.btn-sm { padding: 6px 12px; font-size: 9.5px; }
+
+/* ── FORM ───────────────────────────────────────────────────── */
+.field { margin-bottom: 16px; }
+.field-label { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); display: block; margin-bottom: 7px; }
+.input, .select, .textarea {
+  width: 100%; background: var(--black); border: 1px solid var(--border-lt); border-radius: 3px;
+  color: var(--white); font-family: var(--f-body); font-size: 13.5px; font-weight: 300;
+  padding: 10px 12px; outline: none; transition: border-color 0.15s;
+}
+.input:focus, .select:focus, .textarea:focus { border-color: var(--accent); }
+.select { cursor: pointer; appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--mid) 50%), linear-gradient(135deg, var(--mid) 50%, transparent 50%); background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 32px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* ── TABLE ──────────────────────────────────────────────────── */
+.tbl-wrap { overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tbl th {
+  text-align: left; padding: 11px 20px; border-bottom: 1px solid var(--border);
+  font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--mid); font-weight: 400; white-space: nowrap;
+}
+.tbl td { padding: 13px 20px; border-bottom: 1px solid oklch(15% 0.008 55); color: var(--light); font-weight: 300; }
+.tbl tbody tr:last-child td { border-bottom: none; }
+.tbl tbody tr.clickable { cursor: pointer; transition: background 0.12s; }
+.tbl tbody tr.clickable:hover { background: var(--dark2); }
+.tbl .num { text-align: right; font-family: var(--f-mono); font-weight: 400; color: var(--white); white-space: nowrap; }
+.tbl .strong { color: var(--white); font-weight: 400; }
+
+/* ── MODAL / DRAWER ─────────────────────────────────────────── */
+.overlay {
+  position: fixed; inset: 0; z-index: 300;
+  background: oklch(5% 0 0 / 0.72); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+  opacity: 0; pointer-events: none; transition: opacity 0.18s;
+}
+.overlay.open { opacity: 1; pointer-events: auto; }
+.modal {
+  background: var(--dark); border: 1px solid var(--border-lt); border-radius: 5px;
+  width: 100%; max-width: 620px; max-height: 88vh; overflow-y: auto;
+  transform: translateY(8px) scale(0.99); transition: transform 0.18s;
+}
+.overlay.open .modal { transform: none; }
+.modal-head { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.modal-title { font-family: var(--f-display); font-size: 17px; font-weight: 600; }
+.modal-body { padding: 24px; }
+.modal-foot { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+.x-btn { background: none; border: none; color: var(--mid); font-size: 20px; cursor: pointer; line-height: 1; padding: 0 4px; }
+.x-btn:hover { color: var(--white); }
+
+.drawer-wrap { position: fixed; inset: 0; z-index: 300; pointer-events: none; }
+.drawer-wrap.open { pointer-events: auto; }
+.drawer-scrim { position: absolute; inset: 0; background: oklch(5% 0 0 / 0.6); opacity: 0; transition: opacity 0.2s; }
+.drawer-wrap.open .drawer-scrim { opacity: 1; }
+.drawer {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 420px; max-width: 92vw;
+  background: var(--dark); border-left: 1px solid var(--border-lt);
+  transform: translateX(100%); transition: transform 0.24s cubic-bezier(0.4,0,0.2,1);
+  display: flex; flex-direction: column;
+}
+.drawer-wrap.open .drawer { transform: none; }
+.drawer-head { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.drawer-body { padding: 24px; overflow-y: auto; flex: 1; }
+
+/* ── TIMELINE ───────────────────────────────────────────────── */
+.tl { position: relative; padding-left: 22px; }
+.tl::before { content: ''; position: absolute; left: 4px; top: 6px; bottom: 6px; width: 1px; background: var(--border-lt); }
+.tl-item { position: relative; padding-bottom: 20px; }
+.tl-item:last-child { padding-bottom: 0; }
+.tl-item::before { content: ''; position: absolute; left: -22px; top: 5px; width: 9px; height: 9px; border-radius: 50%; background: var(--dark); border: 1.5px solid var(--border-lt); }
+.tl-item.accent::before { background: var(--accent); border-color: var(--accent); }
+.tl-when { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mid); }
+.tl-what { font-size: 13.5px; color: var(--light); margin-top: 4px; font-weight: 300; }
+
+/* ── SPINNER / TOAST ────────────────────────────────────────── */
+.spinner {
+  width: 13px; height: 13px; border: 1.5px solid oklch(100% 0 0 / 0.28);
+  border-top-color: var(--white); border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.toast-stack { position: fixed; bottom: 24px; right: 24px; z-index: 400; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+.toast {
+  background: var(--dark2); border: 1px solid var(--border-lt); border-left: 2px solid var(--ok);
+  border-radius: 3px; padding: 13px 18px; font-size: 13px; color: var(--light);
+  box-shadow: 0 8px 28px oklch(0% 0 0 / 0.5);
+  animation: toast-in 0.25s cubic-bezier(0.2,0,0.2,1);
+  max-width: 340px;
+}
+.toast.info { border-left-color: var(--accent); }
+@keyframes toast-in { from { opacity: 0; transform: translateX(16px); } }
+.toast.out { opacity: 0; transform: translateX(16px); transition: all 0.25s; }
+
+/* ── MISC ───────────────────────────────────────────────────── */
+.flash { animation: flash 1.8s ease-out; }
+@keyframes flash {
+  0%, 30% { background: oklch(45% 0.18 264 / 0.3); box-shadow: 0 0 0 1px var(--accent); }
+  100%    { background: transparent; box-shadow: none; }
+}
+.empty { padding: 48px 20px; text-align: center; color: var(--mid); font-size: 13px; font-weight: 300; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+/* Without this, a wide child (the calendar's 620px min-width) inflates the
+   shared track instead of scrolling inside its own overflow container. */
+.grid-2 > * { min-width: 0; }
+.src-icon { width: 20px; height: 20px; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+
+@media (max-width: 1080px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+}
+</style>
+<style>
+  /* Series colours validated with the dataviz palette checker against
+     the dark chart surface: worst adjacent ΔE 28.6 (protan), 35.3 normal. */
+  .viz { --s-in: #3B5BDB; --s-out: #d95926; --grid: oklch(20% 0.008 55); position: relative; }
+  .viz svg { width: 100%; height: auto; display: block; }
+  .viz .grid-line { stroke: var(--grid); stroke-width: 1; }
+  .viz .axis-txt { font-family: 'DM Mono', monospace; font-size: 10px; fill: oklch(42% 0.008 55); pointer-events: none; }
+  .viz .grid-line { pointer-events: none; }
+  .viz .hit { fill: transparent; cursor: pointer; }
+  .viz .hit:hover + .hit-bg, .viz .hit-bg.on { fill: oklch(100% 0 0 / 0.035); }
+  .tip {
+    position: absolute; pointer-events: none; z-index: 5; opacity: 0;
+    background: oklch(17% 0.008 55); border: 1px solid var(--border-lt); border-radius: 4px;
+    padding: 10px 13px; font-size: 12px; white-space: nowrap;
+    box-shadow: 0 6px 22px oklch(0% 0 0 / 0.55); transition: opacity 0.12s;
+  }
+  .tip.on { opacity: 1; }
+  .tip-m { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); margin-bottom: 7px; }
+  .tip-r { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .tip-sw { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+  .tip-v { font-family: var(--f-mono); margin-left: auto; padding-left: 18px; color: var(--white); }
+  .legend-row { display: flex; gap: 20px; align-items: center; }
+  .lg { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--mid-lt); }
+  .lg-sw { width: 10px; height: 10px; border-radius: 2px; }
+
+  /* invoice preview */
+  .inv { background: var(--black); border: 1px solid var(--border-lt); border-radius: 4px; padding: 26px; }
+  .inv-top { display: flex; justify-content: space-between; gap: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
+  .inv-no { font-family: var(--f-mono); font-size: 12px; color: var(--accent-br); }
+  .inv-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 18px 0; }
+  .inv-tbl th { text-align: left; font-family: var(--f-mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mid); font-weight: 400; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .inv-tbl td { padding: 9px 0; border-bottom: 1px solid oklch(14% 0.008 55); color: var(--light); font-weight: 300; }
+  .inv-tbl .r { text-align: right; font-family: var(--f-mono); white-space: nowrap; }
+  .inv-tot { display: grid; grid-template-columns: 1fr auto; gap: 7px 26px; font-size: 13px; margin-left: auto; width: max-content; }
+  .inv-tot .lbl { color: var(--mid); }
+  .inv-tot .val { font-family: var(--f-mono); text-align: right; color: var(--light); }
+  .inv-tot .big { font-family: var(--f-display); font-size: 19px; font-weight: 700; color: var(--white); }
+  .qr { display: grid; gap: 0; width: 88px; height: 88px; background: var(--white); padding: 5px; border-radius: 3px; }
+  .qr i { display: block; }
+
+  .line-row { display: grid; grid-template-columns: 1fr 62px 90px 26px; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .line-row .input { padding: 8px 10px; font-size: 12.5px; }
+  .del-x { background: none; border: none; color: var(--mid); cursor: pointer; font-size: 15px; }
+  .del-x:hover { color: var(--bad); }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="sidebar">
+    <div class="side-brand">
+      <span id="logo"></span>
+      <div>
+        <div class="side-brand-sup">Cognitas.</div>
+        <div class="side-brand-name">Nordeste Materiais</div>
+      </div>
+    </div>
+    <nav class="side-nav">
+      <button class="side-link active">📊 <span data-pt="Tesouraria" data-en="Cash flow">Tesouraria</span></button>
+      <button class="side-link" onclick="notInDemo()">🧾 <span data-pt="Faturas" data-en="Invoices">Faturas</span></button>
+      <button class="side-link" onclick="notInDemo()">🏢 <span data-pt="Clientes" data-en="Clients">Clientes</span></button>
+      <button class="side-link" onclick="notInDemo()">🚚 <span data-pt="Fornecedores" data-en="Suppliers">Fornecedores</span></button>
+    </nav>
+    <div class="side-foot">Demo · v1.0</div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-title" data-pt="Tesouraria" data-en="Cash flow">Tesouraria</div>
+      <div class="topbar-actions">
+        <button class="btn btn-primary btn-sm" onclick="newInvoice()"
+                data-pt="＋ Nova fatura" data-en="＋ New invoice">＋ Nova fatura</button>
+        <div class="lang-toggle" id="lang"></div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="stat-row">
+        <div class="stat">
+          <div class="stat-label" data-pt="A receber — agosto" data-en="Incoming — august">A receber — agosto</div>
+          <div class="stat-num ok">€67.500</div>
+          <div class="stat-sub" data-pt="14 faturas em aberto" data-en="14 open invoices">14 faturas em aberto</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label" data-pt="A pagar — agosto" data-en="Outgoing — august">A pagar — agosto</div>
+          <div class="stat-num">€45.600</div>
+          <div class="stat-sub" data-pt="9 pagamentos agendados" data-en="9 scheduled payments">9 pagamentos agendados</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label" data-pt="Saldo previsto" data-en="Projected balance">Saldo previsto</div>
+          <div class="stat-num accent">€21.900</div>
+          <div class="stat-sub" data-pt="Fim do mês" data-en="End of month">Fim do mês</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label" data-pt="Faturas vencidas" data-en="Overdue invoices">Faturas vencidas</div>
+          <div class="stat-num bad">2</div>
+          <div class="stat-sub">€6.310 · <span data-pt="lembrete automático enviado" data-en="automatic reminder sent">lembrete automático enviado</span></div>
+        </div>
+      </div>
+
+      <!-- ── CHART ──────────────────────────────────────────── -->
+      <div class="card" style="margin-bottom:24px;">
+        <div class="card-head">
+          <div>
+            <div class="h-sec" data-pt="Recebimentos e pagamentos" data-en="Money in and out">Recebimentos e pagamentos</div>
+            <div class="eyebrow" style="margin-top:4px;" data-pt="Últimos 12 meses" data-en="Last 12 months">Últimos 12 meses</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:20px;">
+            <div class="legend-row">
+              <span class="lg"><span class="lg-sw" style="background:#3B5BDB"></span><span data-pt="A receber" data-en="Incoming">A receber</span></span>
+              <span class="lg"><span class="lg-sw" style="background:#d95926"></span><span data-pt="A pagar" data-en="Outgoing">A pagar</span></span>
+            </div>
+            <button class="btn btn-ghost btn-sm" id="tblBtn" onclick="toggleTable()"
+                    data-pt="Ver tabela" data-en="View as table">Ver tabela</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="viz" id="viz">
+            <div class="tip" id="tip"></div>
+            <svg id="chart" viewBox="0 0 760 300" role="img" aria-labelledby="chartTitle">
+              <title id="chartTitle" data-pt="Recebimentos e pagamentos mensais, últimos 12 meses"
+                     data-en="Monthly money in and out, last 12 months"></title>
+            </svg>
+          </div>
+          <div id="chartTable" style="display:none; margin-top:8px;"></div>
+        </div>
+      </div>
+
+      <!-- ── SCHEDULED ──────────────────────────────────────── -->
+      <div class="card">
+        <div class="card-head">
+          <div class="h-sec" data-pt="Pagamentos agendados" data-en="Scheduled payments">Pagamentos agendados</div>
+          <span class="eyebrow" data-pt="Atualizado automaticamente" data-en="Updated automatically">Atualizado automaticamente</span>
+        </div>
+        <div class="card-body flush">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th data-pt="Descrição" data-en="Description">Descrição</th>
+                  <th data-pt="Entidade" data-en="Party">Entidade</th>
+                  <th data-pt="Recorrência" data-en="Recurrence">Recorrência</th>
+                  <th data-pt="Próxima data" data-en="Next date">Próxima data</th>
+                  <th style="text-align:right;" data-pt="Valor" data-en="Amount">Valor</th>
+                  <th data-pt="Estado" data-en="Status">Estado</th>
+                </tr>
+              </thead>
+              <tbody id="schedBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ── INVOICE MODAL ────────────────────────────────────────── -->
+<div class="overlay" id="invModal">
+  <div class="modal" style="max-width:660px;">
+    <div class="modal-head">
+      <div class="modal-title" id="invTitle" data-pt="Nova fatura" data-en="New invoice">Nova fatura</div>
+      <button class="x-btn" onclick="closeEl('#invModal')">×</button>
+    </div>
+    <div class="modal-body" id="invBody"></div>
+    <div class="modal-foot" id="invFoot"></div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   COGNITAS — shared demo helpers
+   Bilingual toggle, toasts, modals, formatting. No backend:
+   every demo is deterministic and runs entirely in the browser.
+   ══════════════════════════════════════════════════════════════ */
+
+let LANG = 'pt';
+
+/* ── i18n ───────────────────────────────────────────────────── */
+function applyLang(lang) {
+  LANG = lang;
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-pt]').forEach(el => {
+    const txt = el.getAttribute('data-' + lang);
+    if (txt == null) return;
+    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.placeholder = txt;
+    else el.innerHTML = txt;
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.lang === lang);
+  });
+  document.dispatchEvent(new CustomEvent('langchange', { detail: lang }));
+}
+function t(pt, en) { return LANG === 'pt' ? pt : en; }
+
+function mountLangToggle(host) {
+  const el = typeof host === 'string' ? document.querySelector(host) : host;
+  if (!el) return;
+  el.innerHTML =
+    '<button class="lang-btn active" data-lang="pt">PT</button>' +
+    '<button class="lang-btn" data-lang="en">EN</button>';
+  el.querySelectorAll('.lang-btn').forEach(b =>
+    b.addEventListener('click', () => applyLang(b.dataset.lang))
+  );
+}
+
+/* ── formatting ─────────────────────────────────────────────── */
+const EUR = n => new Intl.NumberFormat('pt-PT', {
+  style: 'currency', currency: 'EUR', minimumFractionDigits: 2
+}).format(n);
+
+const EUR0 = n => new Intl.NumberFormat('pt-PT', {
+  style: 'currency', currency: 'EUR', maximumFractionDigits: 0
+}).format(n);
+
+const MONTHS_PT = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const MONTHS_EN = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+const DOW_PT = ['dom','seg','ter','qua','qui','sex','sáb'];
+const DOW_EN = ['sun','mon','tue','wed','thu','fri','sat'];
+
+function fmtDate(d) {
+  const M = LANG === 'pt' ? MONTHS_PT : MONTHS_EN;
+  return `${d.getDate()} ${M[d.getMonth()]} ${d.getFullYear()}`;
+}
+function fmtDateShort(d) {
+  const M = LANG === 'pt' ? MONTHS_PT : MONTHS_EN;
+  return `${String(d.getDate()).padStart(2, '0')} ${M[d.getMonth()]}`;
+}
+
+/* ── toasts ─────────────────────────────────────────────────── */
+function toast(msg, kind = 'ok', ms = 4200) {
+  let stack = document.querySelector('.toast-stack');
+  if (!stack) {
+    stack = document.createElement('div');
+    stack.className = 'toast-stack';
+    document.body.appendChild(stack);
+  }
+  const el = document.createElement('div');
+  el.className = 'toast' + (kind === 'info' ? ' info' : '');
+  el.innerHTML = msg;
+  stack.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 260);
+  }, ms);
+}
+
+/* ── overlays ───────────────────────────────────────────────── */
+function openEl(sel)  { document.querySelector(sel)?.classList.add('open'); }
+function closeEl(sel) { document.querySelector(sel)?.classList.remove('open'); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.overlay.open, .drawer-wrap.open')
+      .forEach(el => el.classList.remove('open'));
+  }
+});
+
+/* Click the scrim (but not the panel) to dismiss. */
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('overlay') || e.target.classList.contains('drawer-scrim')) {
+    e.target.closest('.overlay, .drawer-wrap').classList.remove('open');
+  }
+});
+
+/* ── fake async ─────────────────────────────────────────────── */
+/* Demos are deterministic; the delay exists so the UI reads as
+   real work happening rather than an instant state swap. */
+function pretendWork(btn, labelHTML, ms, done) {
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner"></span><span>${labelHTML}</span>`;
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.innerHTML = original;
+    done();
+  }, ms);
+}
+
+/* ── shared brand mark ──────────────────────────────────────── */
+function cognitasLogo(size = 26) {
+  const h = Math.round(size * 0.667);
+  return `<svg width="${size}" height="${h}" viewBox="0 0 36 24" fill="none" aria-label="Cognitas">
+    <circle cx="7" cy="12" r="6.5" fill="#3B5BDB"/>
+    <circle cx="7" cy="12" r="2.5" fill="#0D0D0D"/>
+    <path d="M13.5 12 C17 5.5 21 5.5 24.5 12" stroke="#3B5BDB" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+    <path d="M13.5 12 C17 18.5 21 18.5 24.5 12" stroke="#3B5BDB" stroke-width="0.8" stroke-linecap="round" fill="none" opacity="0.45"/>
+    <circle cx="29" cy="12" r="5.5" stroke="#3B5BDB" stroke-width="1.5" fill="none"/>
+    <circle cx="29" cy="12" r="2" fill="#3B5BDB"/>
+  </svg>`;
+}
+
+/* ── demo banner ────────────────────────────────────────────── */
+function mountBanner() {
+  const b = document.createElement('div');
+  b.className = 'demo-banner';
+  b.innerHTML =
+    `<span data-pt="Demonstração interativa · Dados fictícios"
+           data-en="Interactive demo · Fictional data">Demonstração interativa · Dados fictícios</span>
+     <a href="https://demos.cognitas.pt" data-pt="← Todas as demonstrações" data-en="← All demos">← Todas as demonstrações</a>`;
+  document.body.prepend(b);
+}
+</script>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   Nordeste Materiais, Lda. — fictional building-materials
+   distributor. Every company, NIF and figure is invented.
+   ══════════════════════════════════════════════════════════════ */
+
+const MONTHS_KEY = ['set','out','nov','dez','jan','fev','mar','abr','mai','jun','jul','ago'];
+const MONTHS_KEY_EN = ['sep','oct','nov','dec','jan','feb','mar','apr','may','jun','jul','aug'];
+const IN  = [48200, 51400, 46800, 55300, 61200, 58700, 52100, 39400, 57600, 63800, 59200, 67500];
+const OUT = [31500, 34200, 29800, 37100, 41800, 39200, 35600, 26300, 38900, 43100, 40200, 45600];
+
+const CLIENTS = [
+  { name: 'Construções Vaz, Lda.',   nif: '507 412 883' },
+  { name: 'Britas do Vouga, S.A.',   nif: '502 771 340' },
+  { name: 'Telhas Silva & Irmão',    nif: '509 118 265' },
+  { name: 'Câmara Municipal de Viseu', nif: '506 334 019' },
+  { name: 'Obras Ribeiro, Lda.',     nif: '513 902 447' }
+];
+
+const SCHED = [
+  { dPt:'Renda do armazém',       dEn:'Warehouse rent',        who:'Imobiliária Douro',   dir:'out', rPt:'Mensal',    rEn:'Monthly',    date:'01 set', v:1850, st:'ok'   },
+  { dPt:'Fornecimento de cimento',dEn:'Cement supply',         who:'Cimentos do Norte',   dir:'out', rPt:'Mensal',    rEn:'Monthly',    date:'05 set', v:8700, st:'ok'   },
+  { dPt:'Leasing de viaturas',    dEn:'Vehicle leasing',       who:'BFin Leasing',        dir:'out', rPt:'Mensal',    rEn:'Monthly',    date:'08 set', v:1640, st:'ok'   },
+  { dPt:'Seguro de frota',        dEn:'Fleet insurance',       who:'Seguros Atlântico',   dir:'out', rPt:'Trimestral',rEn:'Quarterly',  date:'15 set', v:2340, st:'ok'   },
+  { dPt:'Avença de manutenção',   dEn:'Maintenance retainer',  who:'Construções Vaz',     dir:'in',  rPt:'Mensal',    rEn:'Monthly',    date:'03 set', v:1200, st:'ok'   },
+  { dPt:'Contrato anual',         dEn:'Annual contract',       who:'C. M. de Viseu',      dir:'in',  rPt:'Mensal',    rEn:'Monthly',    date:'10 set', v:3400, st:'ok'   },
+  { dPt:'Fatura FT 2026/0140',    dEn:'Invoice FT 2026/0140',  who:'Telhas Silva & Irmão',dir:'in',  rPt:'Pontual',   rEn:'One-off',    date:'02 set', v:2780, st:'warn' },
+  { dPt:'Fatura FT 2026/0131',    dEn:'Invoice FT 2026/0131',  who:'Britas do Vouga',     dir:'in',  rPt:'Pontual',   rEn:'One-off',    date:'28 ago', v:4920, st:'bad'  }
+];
+
+let invNo = 148, tableOpen = false;
+
+/* ── chart ──────────────────────────────────────────────────── */
+const CH = { w: 760, h: 300, l: 62, r: 14, t: 16, b: 34, max: 70000 };
+
+function renderChart() {
+  const plotW = CH.w - CH.l - CH.r, plotH = CH.h - CH.t - CH.b;
+  const y = v => CH.t + plotH - (v / CH.max) * plotH;
+  const groupW = plotW / 12, barW = 19, gap = 2;
+  const M = LANG === 'pt' ? MONTHS_KEY : MONTHS_KEY_EN;
+
+  /* rounded top, square base — anchored to the axis */
+  const bar = (x, v, fill) => {
+    const yy = y(v), h = CH.t + plotH - yy, rr = Math.min(4, h);
+    /* pointer-events off: the group-wide hit rect underneath owns the hover */
+    return `<path d="M${x},${yy + h} L${x},${yy + rr} Q${x},${yy} ${x + rr},${yy}
+             L${x + barW - rr},${yy} Q${x + barW},${yy} ${x + barW},${yy + rr}
+             L${x + barW},${yy + h} Z" fill="${fill}" pointer-events="none"/>`;
+  };
+
+  let s = '';
+
+  /* gridlines + y labels — recessive, behind the marks */
+  [0, 20000, 40000, 60000].forEach(v => {
+    s += `<line class="grid-line" x1="${CH.l}" x2="${CH.w - CH.r}" y1="${y(v)}" y2="${y(v)}"/>
+          <text class="axis-txt" x="${CH.l - 10}" y="${y(v) + 3.5}" text-anchor="end">${v ? '€' + v / 1000 + 'k' : '0'}</text>`;
+  });
+
+  for (let i = 0; i < 12; i++) {
+    const gx = CH.l + i * groupW;
+    const bx = gx + (groupW - (barW * 2 + gap)) / 2;
+    s += `<rect class="hit" x="${gx}" y="${CH.t}" width="${groupW}" height="${plotH}"
+                data-i="${i}" tabindex="0"/>`;
+    s += `<rect class="hit-bg" id="hb${i}" x="${gx}" y="${CH.t}" width="${groupW}" height="${plotH}" fill="transparent" pointer-events="none"/>`;
+    s += bar(bx, IN[i], '#3B5BDB');
+    s += bar(bx + barW + gap, OUT[i], '#d95926');
+    s += `<text class="axis-txt" x="${gx + groupW / 2}" y="${CH.h - 12}" text-anchor="middle">${M[i]}</text>`;
+  }
+
+  /* baseline sits above the labels */
+  s += `<line class="grid-line" x1="${CH.l}" x2="${CH.w - CH.r}" y1="${y(0)}" y2="${y(0)}" stroke="oklch(28% 0.008 55)"/>`;
+
+  const svg = document.getElementById('chart');
+  svg.innerHTML = `<title id="chartTitle">${t('Recebimentos e pagamentos mensais, últimos 12 meses','Monthly money in and out, last 12 months')}</title>` + s;
+
+  const tip = document.getElementById('tip'), viz = document.getElementById('viz');
+  svg.querySelectorAll('.hit').forEach(hit => {
+    const show = e => {
+      const i = +hit.dataset.i;
+      document.querySelectorAll('.hit-bg').forEach(b => b.classList.remove('on'));
+      document.getElementById('hb' + i).classList.add('on');
+      tip.innerHTML = `
+        <div class="tip-m">${M[i]} ${i < 4 ? 2025 : 2026}</div>
+        <div class="tip-r"><span class="tip-sw" style="background:#3B5BDB"></span>
+          <span>${t('A receber','Incoming')}</span><span class="tip-v">${EUR0(IN[i])}</span></div>
+        <div class="tip-r"><span class="tip-sw" style="background:#d95926"></span>
+          <span>${t('A pagar','Outgoing')}</span><span class="tip-v">${EUR0(OUT[i])}</span></div>`;
+      tip.classList.add('on');
+      const box = viz.getBoundingClientRect();
+      const px = e.clientX ? e.clientX - box.left : (i + 0.5) / 12 * box.width;
+      tip.style.left = Math.min(Math.max(px + 14, 8), box.width - tip.offsetWidth - 8) + 'px';
+      tip.style.top = '14px';
+    };
+    hit.addEventListener('mousemove', show);
+    hit.addEventListener('focus', show);
+    hit.addEventListener('mouseleave', () => {
+      tip.classList.remove('on');
+      document.querySelectorAll('.hit-bg').forEach(b => b.classList.remove('on'));
+    });
+  });
+
+  /* the same numbers, reachable without a pointer */
+  document.getElementById('chartTable').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr>
+        <th>${t('Mês','Month')}</th>
+        <th style="text-align:right;">${t('A receber','Incoming')}</th>
+        <th style="text-align:right;">${t('A pagar','Outgoing')}</th>
+        <th style="text-align:right;">${t('Saldo','Balance')}</th>
+      </tr></thead>
+      <tbody>${M.map((m, i) => `<tr>
+        <td class="strong">${m} ${i < 4 ? 2025 : 2026}</td>
+        <td class="num">${EUR0(IN[i])}</td>
+        <td class="num">${EUR0(OUT[i])}</td>
+        <td class="num" style="color:${IN[i] - OUT[i] >= 0 ? 'var(--ok)' : 'var(--bad)'}">${EUR0(IN[i] - OUT[i])}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+}
+
+function toggleTable() {
+  tableOpen = !tableOpen;
+  document.getElementById('chartTable').style.display = tableOpen ? 'block' : 'none';
+  const b = document.getElementById('tblBtn');
+  b.setAttribute('data-pt', tableOpen ? 'Ocultar tabela' : 'Ver tabela');
+  b.setAttribute('data-en', tableOpen ? 'Hide table' : 'View as table');
+  b.textContent = t(b.getAttribute('data-pt'), b.getAttribute('data-en'));
+}
+
+/* ── scheduled table ────────────────────────────────────────── */
+function renderSched() {
+  document.getElementById('schedBody').innerHTML = SCHED.map(r => {
+    const stTxt = { ok: t('Agendado','Scheduled'), warn: t('Pendente','Pending'), bad: t('Vencida','Overdue') }[r.st];
+    const arrow = r.dir === 'in'
+      ? `<span style="color:var(--ok)">↓</span>` : `<span style="color:var(--warn)">↑</span>`;
+    return `<tr>
+      <td class="strong">${arrow} ${t(r.dPt, r.dEn)}</td>
+      <td>${r.who}</td>
+      <td>${t(r.rPt, r.rEn)}</td>
+      <td class="mono" style="font-size:12.5px;">${r.date}</td>
+      <td class="num" style="color:${r.dir === 'in' ? 'var(--ok)' : 'var(--light)'}">
+        ${r.dir === 'in' ? '+' : '−'}${EUR(r.v)}</td>
+      <td><span class="pill ${r.st}">${stTxt}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ── invoice builder ────────────────────────────────────────── */
+let lines = [];
+
+function newInvoice() {
+  lines = [
+    { d: t('Cimento Portland 42,5 R — saco 25 kg','Portland cement 42.5 R — 25 kg bag'), q: 240, p: 5.40 },
+    { d: t('Tijolo furado 30×20×15','Hollow brick 30×20×15'), q: 1800, p: 0.62 },
+    { d: t('Transporte e descarga','Delivery and unloading'), q: 1, p: 180.00 }
+  ];
+  document.getElementById('invTitle').textContent = t('Nova fatura','New invoice');
+  renderBuilder();
+  openEl('#invModal');
+}
+
+function renderBuilder() {
+  document.getElementById('invBody').innerHTML = `
+    <div class="field">
+      <label class="field-label">${t('Cliente','Client')}</label>
+      <select class="select" id="invClient">
+        ${CLIENTS.map((c, i) => `<option value="${i}">${c.name} · NIF ${c.nif}</option>`).join('')}
+      </select>
+    </div>
+    <label class="field-label" style="margin-top:20px;">${t('Linhas','Lines')}</label>
+    <div class="line-row" style="margin-bottom:6px;">
+      <span class="eyebrow">${t('Descrição','Description')}</span>
+      <span class="eyebrow">${t('Qtd','Qty')}</span>
+      <span class="eyebrow">${t('Preço un.','Unit price')}</span><span></span>
+    </div>
+    <div id="lineBox"></div>
+    <button class="btn btn-ghost btn-sm" onclick="addLine()" style="margin-top:4px;">
+      ＋ ${t('Adicionar linha','Add line')}</button>
+    <div style="margin-top:24px; padding-top:18px; border-top:1px solid var(--border);">
+      <div class="inv-tot" id="totals"></div>
+    </div>`;
+
+  document.getElementById('invFoot').innerHTML = `
+    <button class="btn btn-ghost" onclick="closeEl('#invModal')">${t('Cancelar','Cancel')}</button>
+    <button class="btn btn-primary" id="genBtn">${t('Gerar fatura','Generate invoice')}</button>`;
+
+  document.getElementById('genBtn').addEventListener('click', function () {
+    pretendWork(this, t('A gerar…','Generating…'), 1200, showInvoice);
+  });
+
+  renderLines();
+}
+
+function renderLines() {
+  document.getElementById('lineBox').innerHTML = lines.map((l, i) => `
+    <div class="line-row">
+      <input class="input" value="${l.d}" oninput="lines[${i}].d=this.value">
+      <input class="input" type="number" value="${l.q}" min="0"
+             oninput="lines[${i}].q=+this.value||0; renderTotals()">
+      <input class="input" type="number" value="${l.p}" min="0" step="0.01"
+             oninput="lines[${i}].p=+this.value||0; renderTotals()">
+      <button class="del-x" onclick="lines.splice(${i},1); renderLines(); renderTotals()">×</button>
+    </div>`).join('');
+  renderTotals();
+}
+
+function addLine() { lines.push({ d: '', q: 1, p: 0 }); renderLines(); }
+
+const netOf = () => lines.reduce((s, l) => s + l.q * l.p, 0);
+
+function renderTotals() {
+  const net = netOf(), iva = net * 0.23;
+  document.getElementById('totals').innerHTML = `
+    <span class="lbl">${t('Subtotal','Subtotal')}</span><span class="val">${EUR(net)}</span>
+    <span class="lbl">IVA 23%</span><span class="val">${EUR(iva)}</span>
+    <span class="lbl big">${t('Total','Total')}</span><span class="val big">${EUR(net + iva)}</span>`;
+}
+
+/* ── generated invoice + AT submission ──────────────────────── */
+function pseudoQR(seed) {
+  /* Decorative stand-in for the AT QR code — deterministic, not scannable. */
+  let h = 0; for (const ch of seed) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const N = 21; let cells = '';
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const finder = (r < 7 && c < 7) || (r < 7 && c > N - 8) || (r > N - 8 && c < 7);
+    const ring = finder && (r % 6 === 0 || c % 6 === 0 || (r > 1 && r < 5 && c > 1 && c < 5));
+    h = (h * 1103515245 + 12345) >>> 0;
+    const on = finder ? ring : (h >>> 16) % 100 < 46;
+    cells += `<i style="background:${on ? '#0D0D0D' : 'transparent'}"></i>`;
+  }
+  return `<div class="qr" style="grid-template-columns:repeat(${N},1fr); grid-template-rows:repeat(${N},1fr);">${cells}</div>`;
+}
+
+function showInvoice() {
+  const c = CLIENTS[+document.getElementById('invClient').value];
+  const net = netOf(), iva = net * 0.23, tot = net + iva;
+  const no = `FT 2026/${String(invNo).padStart(4, '0')}`;
+  const atcud = `CSDF7T5H-${String(invNo).padStart(4, '0')}`;
+
+  document.getElementById('invTitle').textContent = t('Fatura gerada','Invoice generated');
+  document.getElementById('invBody').innerHTML = `
+    <div class="inv">
+      <div class="inv-top">
+        <div>
+          <div style="font-family:var(--f-display); font-size:16px; font-weight:700;">Nordeste Materiais, Lda.</div>
+          <div class="muted" style="font-size:11.5px; margin-top:3px;">NIF 505 227 619 · Viseu</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="inv-no">${no}</div>
+          <div class="muted" style="font-size:11.5px; margin-top:3px;">09 ago 2026</div>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; gap:20px; padding:16px 0;">
+        <div>
+          <div class="eyebrow" style="margin-bottom:5px;">${t('Cliente','Client')}</div>
+          <div style="font-size:13.5px;">${c.name}</div>
+          <div class="muted" style="font-size:11.5px;">NIF ${c.nif}</div>
+        </div>
+        <div id="qrSlot" style="opacity:0.25;">${pseudoQR(no + c.nif)}</div>
+      </div>
+
+      <table class="inv-tbl">
+        <thead><tr>
+          <th>${t('Descrição','Description')}</th>
+          <th class="r">${t('Qtd','Qty')}</th>
+          <th class="r">${t('Preço','Price')}</th>
+          <th class="r">${t('Total','Total')}</th>
+        </tr></thead>
+        <tbody>${lines.map(l => `<tr>
+          <td>${l.d || '—'}</td><td class="r">${l.q}</td>
+          <td class="r">${EUR(l.p)}</td><td class="r">${EUR(l.q * l.p)}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+
+      <div class="inv-tot">
+        <span class="lbl">${t('Subtotal','Subtotal')}</span><span class="val">${EUR(net)}</span>
+        <span class="lbl">IVA 23%</span><span class="val">${EUR(iva)}</span>
+        <span class="lbl big">${t('Total','Total')}</span><span class="val big">${EUR(tot)}</span>
+      </div>
+
+      <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border);
+                  display:flex; justify-content:space-between; align-items:center; gap:14px;">
+        <div>
+          <div class="eyebrow">ATCUD</div>
+          <div class="mono" style="font-size:12px; margin-top:4px;" id="atcud">
+            <span class="muted">${t('por comunicar','not yet submitted')}</span></div>
+        </div>
+        <span class="pill mute" id="atPill">${t('Não comunicada','Not submitted')}</span>
+      </div>
+    </div>`;
+
+  document.getElementById('invFoot').innerHTML = `
+    <button class="btn btn-ghost" onclick="closeEl('#invModal')">${t('Fechar','Close')}</button>
+    <button class="btn btn-ghost" onclick="toast('${t('PDF descarregado ✓','PDF downloaded ✓')}')">${t('Descarregar PDF','Download PDF')}</button>
+    <button class="btn btn-primary" id="atBtn">${t('Comunicar à AT','Submit to tax authority')}</button>`;
+
+  document.getElementById('atBtn').addEventListener('click', function () {
+    pretendWork(this, t('A comunicar…','Submitting…'), 1900, () => {
+      document.getElementById('atcud').innerHTML = `<b style="color:var(--white)">${atcud}</b>`;
+      document.getElementById('atPill').outerHTML =
+        `<span class="pill ok" id="atPill">${t('Comunicada','Submitted')}</span>`;
+      document.getElementById('qrSlot').style.opacity = '1';
+      this.outerHTML = `<button class="btn btn-ghost" disabled>${t('Comunicada ✓','Submitted ✓')}</button>`;
+      invNo++;
+      toast(`<b>${t('Fatura comunicada à AT','Invoice submitted')}</b><br>ATCUD ${atcud}`);
+      setTimeout(() => toast(t('Enviada ao cliente por email ✓','Emailed to the client ✓'), 'info'), 800);
+    });
+  });
+}
+
+function notInDemo() {
+  toast(t('Esta secção existe na versão completa — a demonstração cobre apenas a tesouraria.',
+          'This section exists in the full product — the demo covers cash flow only.'), 'info');
+}
+
+/* ── boot ───────────────────────────────────────────────────── */
+document.getElementById('logo').innerHTML = cognitasLogo(26);
+mountBanner();
+mountLangToggle('#lang');
+
+function renderAll() { renderChart(); renderSched(); }
+document.addEventListener('langchange', renderAll);
+renderAll();
+applyLang('pt');
+window.addEventListener('resize', () => document.getElementById('tip').classList.remove('on'));
+</script>
+</body>
+</html>

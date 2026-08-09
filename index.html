@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demonstrações — COGNITAS</title>
+<meta name="description" content="Demonstrações interativas de automações COGNITAS: encomendas por email, marcações, CRM e faturação.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ── shared COGNITAS demo shell ──────────────────────────────
+   Inlined on purpose: these pages are opened straight from disk
+   as often as they are served, and Safari blocks file:// sub-
+   resources that traverse up a directory. Self-contained pages
+   work everywhere — served, double-clicked, or offline.
+   ──────────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   COGNITAS — shared demo shell
+   Design tokens lifted from cognitas.pt so the demos read as the
+   same product family. Dark-only by design (matches the site).
+   ══════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --black:     oklch(10% 0.008 55);
+  --dark:      oklch(12% 0.008 55);
+  --dark2:     oklch(15% 0.008 55);
+  --dark3:     oklch(18% 0.008 55);
+  --border:    oklch(19% 0.008 55);
+  --border-lt: oklch(24% 0.008 55);
+  --mid:       oklch(44% 0.008 55);
+  --mid-lt:    oklch(56% 0.008 55);
+  --light:     oklch(72% 0.008 55);
+  --white:     oklch(99% 0.004 55);
+
+  --accent:    oklch(45% 0.18 264);
+  --accent-br: oklch(58% 0.16 264);
+  --accent-dim:oklch(45% 0.18 264 / 0.12);
+
+  --ok:        oklch(58% 0.15 150);
+  --warn:      oklch(65% 0.15 65);
+  --bad:       oklch(58% 0.19 25);
+
+  /* Fallbacks matter: these pages are often opened straight from disk,
+     where the Google Fonts request may not resolve. */
+  --f-display: 'Outfit', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif;
+  --f-body:    'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --f-mono:    'DM Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+html { -webkit-font-smoothing: antialiased; }
+body {
+  font-family: var(--f-body);
+  background: var(--black);
+  color: var(--white);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── DEMO BANNER ────────────────────────────────────────────── */
+.demo-banner {
+  position: sticky; top: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 9px 20px;
+  background: oklch(30% 0.13 65); color: oklch(97% 0.02 65);
+  font-family: var(--f-mono); font-size: 10px;
+  letter-spacing: 0.16em; text-transform: uppercase;
+}
+.demo-banner a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.demo-banner-note { opacity: 0.75; letter-spacing: 0.1em; text-transform: none; font-size: 11px; }
+
+/* ── SHELL ──────────────────────────────────────────────────── */
+.shell { display: flex; min-height: calc(100vh - 36px); }
+
+.sidebar {
+  width: 224px; flex-shrink: 0;
+  background: var(--dark); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+}
+.side-brand { padding: 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+.side-brand-sup { font-family: var(--f-mono); font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mid); }
+.side-brand-name { font-family: var(--f-display); font-size: 14px; font-weight: 600; color: var(--white); margin-top: 2px; }
+.side-nav { flex: 1; padding: 14px 12px; display: flex; flex-direction: column; gap: 2px; }
+.side-link {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: 3px;
+  font-size: 13.5px; color: var(--mid); text-decoration: none;
+  cursor: pointer; transition: all 0.15s; border: none; background: none;
+  font-family: var(--f-body); text-align: left; width: 100%;
+}
+.side-link:hover { color: var(--light); background: var(--dark2); }
+.side-link.active { background: var(--accent-dim); color: var(--accent-br); }
+.side-foot { padding: 16px 20px; border-top: 1px solid var(--border); font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: oklch(34% 0.008 55); }
+
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.topbar {
+  height: 58px; flex-shrink: 0; padding: 0 28px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+}
+.topbar-title { font-family: var(--f-display); font-size: 16px; font-weight: 600; }
+.topbar-actions { display: flex; align-items: center; gap: 10px; }
+.content { padding: 28px; flex: 1; }
+
+/* ── LANG TOGGLE ────────────────────────────────────────────── */
+.lang-toggle { display: flex; border: 1px solid var(--border-lt); overflow: hidden; border-radius: 3px; }
+.lang-btn {
+  font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 5px 10px; cursor: pointer; border: none; background: none; color: var(--mid); transition: all 0.15s;
+}
+.lang-btn.active { background: var(--accent); color: var(--white); }
+
+/* ── TYPO ───────────────────────────────────────────────────── */
+.eyebrow { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mid); }
+.h-sec { font-family: var(--f-display); font-size: 15px; font-weight: 600; color: var(--white); }
+.muted { color: var(--mid); }
+.mono { font-family: var(--f-mono); }
+
+/* ── CARD ───────────────────────────────────────────────────── */
+.card { background: var(--dark); border: 1px solid var(--border); border-radius: 4px; }
+.card-head {
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.card-body { padding: 20px; }
+.card-body.flush { padding: 0; }
+
+/* ── STATS ──────────────────────────────────────────────────── */
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 2px; background: var(--border); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 24px; }
+.stat { background: var(--dark); padding: 20px 22px; }
+.stat-label { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mid); }
+.stat-num { font-family: var(--f-display); font-size: 30px; font-weight: 800; letter-spacing: -0.02em; margin-top: 8px; line-height: 1; }
+.stat-num.accent { color: var(--accent-br); }
+.stat-num.ok { color: var(--ok); }
+.stat-num.bad { color: var(--bad); }
+.stat-sub { font-size: 12px; color: var(--mid); margin-top: 6px; font-weight: 300; }
+
+/* ── PILLS ──────────────────────────────────────────────────── */
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px; border-radius: 3px;
+  font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
+  white-space: nowrap;
+}
+.pill::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.pill.mute { color: var(--mid-lt);   background: oklch(22% 0.008 55); }
+.pill.info { color: var(--accent-br); background: oklch(45% 0.18 264 / 0.14); }
+.pill.warn { color: var(--warn);      background: oklch(65% 0.15 65 / 0.13); }
+.pill.ok   { color: var(--ok);        background: oklch(58% 0.15 150 / 0.13); }
+.pill.bad  { color: var(--bad);       background: oklch(58% 0.19 25 / 0.13); }
+
+/* ── BUTTONS ────────────────────────────────────────────────── */
+.btn {
+  font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 10px 18px; border: none; border-radius: 3px; cursor: pointer;
+  transition: all 0.15s; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary { background: var(--accent); color: var(--white); }
+.btn-primary:hover:not(:disabled) { background: var(--accent-br); }
+.btn-ghost { background: none; color: var(--mid-lt); border: 1px solid var(--border-lt); }
+.btn-ghost:hover:not(:disabled) { color: var(--white); border-color: var(--mid); }
+.btn-sm { padding: 6px 12px; font-size: 9.5px; }
+
+/* ── FORM ───────────────────────────────────────────────────── */
+.field { margin-bottom: 16px; }
+.field-label { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); display: block; margin-bottom: 7px; }
+.input, .select, .textarea {
+  width: 100%; background: var(--black); border: 1px solid var(--border-lt); border-radius: 3px;
+  color: var(--white); font-family: var(--f-body); font-size: 13.5px; font-weight: 300;
+  padding: 10px 12px; outline: none; transition: border-color 0.15s;
+}
+.input:focus, .select:focus, .textarea:focus { border-color: var(--accent); }
+.select { cursor: pointer; appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--mid) 50%), linear-gradient(135deg, var(--mid) 50%, transparent 50%); background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 32px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* ── TABLE ──────────────────────────────────────────────────── */
+.tbl-wrap { overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tbl th {
+  text-align: left; padding: 11px 20px; border-bottom: 1px solid var(--border);
+  font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--mid); font-weight: 400; white-space: nowrap;
+}
+.tbl td { padding: 13px 20px; border-bottom: 1px solid oklch(15% 0.008 55); color: var(--light); font-weight: 300; }
+.tbl tbody tr:last-child td { border-bottom: none; }
+.tbl tbody tr.clickable { cursor: pointer; transition: background 0.12s; }
+.tbl tbody tr.clickable:hover { background: var(--dark2); }
+.tbl .num { text-align: right; font-family: var(--f-mono); font-weight: 400; color: var(--white); white-space: nowrap; }
+.tbl .strong { color: var(--white); font-weight: 400; }
+
+/* ── MODAL / DRAWER ─────────────────────────────────────────── */
+.overlay {
+  position: fixed; inset: 0; z-index: 300;
+  background: oklch(5% 0 0 / 0.72); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+  opacity: 0; pointer-events: none; transition: opacity 0.18s;
+}
+.overlay.open { opacity: 1; pointer-events: auto; }
+.modal {
+  background: var(--dark); border: 1px solid var(--border-lt); border-radius: 5px;
+  width: 100%; max-width: 620px; max-height: 88vh; overflow-y: auto;
+  transform: translateY(8px) scale(0.99); transition: transform 0.18s;
+}
+.overlay.open .modal { transform: none; }
+.modal-head { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.modal-title { font-family: var(--f-display); font-size: 17px; font-weight: 600; }
+.modal-body { padding: 24px; }
+.modal-foot { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+.x-btn { background: none; border: none; color: var(--mid); font-size: 20px; cursor: pointer; line-height: 1; padding: 0 4px; }
+.x-btn:hover { color: var(--white); }
+
+.drawer-wrap { position: fixed; inset: 0; z-index: 300; pointer-events: none; }
+.drawer-wrap.open { pointer-events: auto; }
+.drawer-scrim { position: absolute; inset: 0; background: oklch(5% 0 0 / 0.6); opacity: 0; transition: opacity 0.2s; }
+.drawer-wrap.open .drawer-scrim { opacity: 1; }
+.drawer {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 420px; max-width: 92vw;
+  background: var(--dark); border-left: 1px solid var(--border-lt);
+  transform: translateX(100%); transition: transform 0.24s cubic-bezier(0.4,0,0.2,1);
+  display: flex; flex-direction: column;
+}
+.drawer-wrap.open .drawer { transform: none; }
+.drawer-head { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.drawer-body { padding: 24px; overflow-y: auto; flex: 1; }
+
+/* ── TIMELINE ───────────────────────────────────────────────── */
+.tl { position: relative; padding-left: 22px; }
+.tl::before { content: ''; position: absolute; left: 4px; top: 6px; bottom: 6px; width: 1px; background: var(--border-lt); }
+.tl-item { position: relative; padding-bottom: 20px; }
+.tl-item:last-child { padding-bottom: 0; }
+.tl-item::before { content: ''; position: absolute; left: -22px; top: 5px; width: 9px; height: 9px; border-radius: 50%; background: var(--dark); border: 1.5px solid var(--border-lt); }
+.tl-item.accent::before { background: var(--accent); border-color: var(--accent); }
+.tl-when { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mid); }
+.tl-what { font-size: 13.5px; color: var(--light); margin-top: 4px; font-weight: 300; }
+
+/* ── SPINNER / TOAST ────────────────────────────────────────── */
+.spinner {
+  width: 13px; height: 13px; border: 1.5px solid oklch(100% 0 0 / 0.28);
+  border-top-color: var(--white); border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.toast-stack { position: fixed; bottom: 24px; right: 24px; z-index: 400; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+.toast {
+  background: var(--dark2); border: 1px solid var(--border-lt); border-left: 2px solid var(--ok);
+  border-radius: 3px; padding: 13px 18px; font-size: 13px; color: var(--light);
+  box-shadow: 0 8px 28px oklch(0% 0 0 / 0.5);
+  animation: toast-in 0.25s cubic-bezier(0.2,0,0.2,1);
+  max-width: 340px;
+}
+.toast.info { border-left-color: var(--accent); }
+@keyframes toast-in { from { opacity: 0; transform: translateX(16px); } }
+.toast.out { opacity: 0; transform: translateX(16px); transition: all 0.25s; }
+
+/* ── MISC ───────────────────────────────────────────────────── */
+.flash { animation: flash 1.8s ease-out; }
+@keyframes flash {
+  0%, 30% { background: oklch(45% 0.18 264 / 0.3); box-shadow: 0 0 0 1px var(--accent); }
+  100%    { background: transparent; box-shadow: none; }
+}
+.empty { padding: 48px 20px; text-align: center; color: var(--mid); font-size: 13px; font-weight: 300; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+/* Without this, a wide child (the calendar's 620px min-width) inflates the
+   shared track instead of scrolling inside its own overflow container. */
+.grid-2 > * { min-width: 0; }
+.src-icon { width: 20px; height: 20px; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+
+@media (max-width: 1080px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+}
+</style>
+<style>
+  body { overflow-x: hidden; }
+  nav {
+    position: sticky; top: 0; z-index: 100; height: 62px;
+    display: flex; align-items: center; justify-content: space-between; padding: 0 40px;
+    background: oklch(10% 0.008 55 / 0.92); backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+  .nav-word { font-family: var(--f-display); font-weight: 800; font-size: 16px; letter-spacing: 0.1em; color: var(--white); }
+  .nav-word span { color: var(--accent-br); }
+
+  .hero { padding: 92px 40px 72px; position: relative; overflow: hidden; }
+  .hero-grid-bg {
+    position: absolute; inset: 0;
+    background-image: linear-gradient(var(--border) 1px, transparent 1px),
+                      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 68px 68px; opacity: 0.5;
+    mask-image: radial-gradient(ellipse 70% 80% at 30% 0%, #000 0%, transparent 70%);
+  }
+  .hero-inner { position: relative; max-width: 780px; }
+  .hero-title {
+    font-family: var(--f-display); font-size: clamp(29px, 5.4vw, 62px); font-weight: 800;
+    letter-spacing: -0.03em; line-height: 1.03; margin: 18px 0 22px;
+    overflow-wrap: break-word;
+  }
+  .hero-title em { font-style: normal; color: var(--accent-br); }
+  .hero-sub { font-size: 17px; font-weight: 300; color: var(--mid-lt); line-height: 1.65; max-width: 560px; }
+
+  .note {
+    display: flex; gap: 12px; align-items: flex-start; max-width: 620px;
+    margin-top: 30px; padding: 15px 18px;
+    background: oklch(20% 0.06 65 / 0.35); border: 1px solid oklch(34% 0.09 65 / 0.5);
+    border-radius: 4px; font-size: 13px; font-weight: 300; color: oklch(84% 0.04 65); line-height: 1.6;
+  }
+
+  .demos { padding: 0 40px 90px; }
+  /* min() keeps the track from forcing the page wider than the
+     viewport on phones narrower than the 330px floor + padding */
+  .demo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(330px, 100%), 1fr)); gap: 2px; background: var(--border); border: 1px solid var(--border); border-radius: 5px; overflow: hidden; }
+  .demo {
+    background: var(--dark); padding: 34px 32px 30px; text-decoration: none; color: inherit;
+    display: flex; flex-direction: column; position: relative;
+    border-bottom: 2px solid transparent; transition: all 0.22s;
+  }
+  .demo:hover { background: oklch(14% 0.008 55); border-bottom-color: var(--accent); }
+  .demo-n { font-family: var(--f-display); font-size: 34px; font-weight: 800; color: oklch(19% 0.008 55); line-height: 1; }
+  .demo-sector { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent-br); margin: 18px 0 9px; }
+  .demo-title { font-family: var(--f-display); font-size: 21px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 14px; }
+  .demo-q { font-size: 14px; font-weight: 300; color: var(--mid-lt); line-height: 1.65; margin-bottom: 12px; }
+  .demo-a { font-size: 14px; font-weight: 300; color: var(--light); line-height: 1.65; padding-left: 13px; border-left: 2px solid var(--accent); margin-bottom: 22px; }
+  .demo-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; margin-bottom: 20px; }
+  .tag { font-family: var(--f-mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; padding: 4px 9px; border: 1px solid var(--border-lt); color: var(--mid); border-radius: 2px; }
+  .demo-go { font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent-br); display: flex; align-items: center; gap: 8px; }
+  .demo:hover .demo-go { gap: 13px; }
+  .demo-go span { transition: all 0.22s; }
+  .ribbon {
+    position: absolute; top: 26px; right: 28px;
+    font-family: var(--f-mono); font-size: 8.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    padding: 4px 9px; border-radius: 2px; background: oklch(58% 0.15 150 / 0.14); color: var(--ok);
+  }
+
+  .strip { padding: 74px 40px; background: var(--dark); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .strip-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 44px; max-width: 1100px; }
+  .strip-t { font-family: var(--f-display); font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+  .strip-b { font-size: 13.5px; font-weight: 300; color: var(--mid); line-height: 1.7; }
+
+  .cta { padding: 78px 40px; background: var(--accent); display: flex; align-items: center; justify-content: space-between; gap: 36px; flex-wrap: wrap; }
+  .cta-t { font-family: var(--f-display); font-size: clamp(26px, 3vw, 40px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.08; }
+  .cta-s { font-size: 15px; font-weight: 300; color: oklch(86% 0.08 264); margin-top: 11px; }
+  .btn-white { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; background: var(--white); color: var(--accent); border: none; padding: 17px 36px; cursor: pointer; text-decoration: none; display: inline-block; }
+  .btn-white:hover { opacity: 0.9; }
+
+  footer { padding: 34px 40px; display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; font-family: var(--f-mono); font-size: 10.5px; letter-spacing: 0.06em; color: oklch(38% 0.008 55); }
+  footer a { color: inherit; }
+  @media (max-width: 640px) {
+    nav, .hero, .demos, .strip, .cta, footer { padding-left: 22px; padding-right: 22px; }
+    .hero { padding-top: 56px; padding-bottom: 48px; }
+    .demo { padding: 28px 22px 26px; }
+    .cta { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="https://cognitas.pt">
+    <span id="logo"></span>
+    <span class="nav-word">COGNITAS<span>.</span></span>
+  </a>
+  <div style="display:flex; align-items:center; gap:18px;">
+    <a href="https://cognitas.pt" style="font-family:var(--f-mono); font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color:var(--mid); text-decoration:none;"
+       data-pt="← Voltar ao site" data-en="← Back to site">← Voltar ao site</a>
+    <div class="lang-toggle" id="lang"></div>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-grid-bg"></div>
+  <div class="hero-inner">
+    <div class="eyebrow" data-pt="Demonstrações" data-en="Demos">Demonstrações</div>
+    <h1 class="hero-title" data-pt="Veja o que construímos,<br><em>antes de falarmos.</em>"
+        data-en="See what we build,<br><em>before we talk.</em>">Veja o que construímos,<br><em>antes de falarmos.</em></h1>
+    <p class="hero-sub"
+       data-pt="Quatro processos manuais que automatizámos para empresas reais — aqui reconstruídos com dados inventados, para poder clicar à vontade. Cada demonstração leva menos de dois minutos."
+       data-en="Four manual processes we've automated for real companies — rebuilt here with invented data so you can click freely. Each demo takes under two minutes.">
+    </p>
+    <div class="note">
+      <span style="flex-shrink:0;">⚠️</span>
+      <span data-pt="Todas as empresas, pessoas, valores e documentos nestas páginas são fictícios. Nenhum dado de clientes da COGNITAS é aqui apresentado."
+            data-en="Every company, person, figure and document on these pages is fictional. No COGNITAS client data is shown anywhere here."></span>
+    </div>
+  </div>
+</section>
+
+<section class="demos">
+  <div class="demo-grid">
+
+    <a class="demo" href="https://orders.cognitas.pt">
+      <span class="ribbon" data-pt="Sistema real" data-en="Real system">Sistema real</span>
+      <div class="demo-n">01</div>
+      <div class="demo-sector" data-pt="Distribuição alimentar" data-en="Food distribution">Distribuição alimentar</div>
+      <div class="demo-title" data-pt="Encomendas por email" data-en="Orders by email">Encomendas por email</div>
+      <div class="demo-q"
+           data-pt="Os clientes enviam encomendas por email em três formatos diferentes. Alguém tem de as ler e reintroduzir uma a uma no ERP."
+           data-en="Clients email orders in three different formats. Someone has to read each one and retype it into the ERP."></div>
+      <div class="demo-a"
+           data-pt="A IA lê o email e os anexos, identifica os produtos, faz corresponder às referências internas e apresenta a encomenda pronta para aprovação."
+           data-en="AI reads the email and its attachments, identifies the products, matches them to internal references and presents the order ready for approval."></div>
+      <div class="demo-tags">
+        <span class="tag">Email</span><span class="tag">PDF · Excel</span><span class="tag">ERP</span><span class="tag">SAGE 100c</span>
+      </div>
+      <div class="demo-go"><span data-pt="Abrir demonstração" data-en="Open demo">Abrir demonstração</span><span>→</span></div>
+    </a>
+
+    <a class="demo" href="https://agenda.cognitas.pt">
+      <div class="demo-n">02</div>
+      <div class="demo-sector" data-pt="Saúde · Serviços" data-en="Healthcare · Services">Saúde · Serviços</div>
+      <div class="demo-title" data-pt="Marcações online" data-en="Online booking">Marcações online</div>
+      <div class="demo-q"
+           data-pt="Os clientes telefonam para marcar. Quando não há ninguém na receção, a marcação perde-se — e as faltas custam horas vazias."
+           data-en="Clients phone to book. When nobody's at the desk the booking is lost — and no-shows cost empty hours."></div>
+      <div class="demo-a"
+           data-pt="O cliente marca sozinho a partir do site. O slot fecha em tempo real, a confirmação e o lembrete saem sozinhos."
+           data-en="The client books from the website. The slot closes in real time; confirmation and reminder go out on their own."></div>
+      <div class="demo-tags">
+        <span class="tag">Agenda</span><span class="tag">Email</span><span class="tag">SMS</span><span class="tag" data-pt="Multi-equipa" data-en="Multi-staff">Multi-equipa</span>
+      </div>
+      <div class="demo-go"><span data-pt="Abrir demonstração" data-en="Open demo">Abrir demonstração</span><span>→</span></div>
+    </a>
+
+    <a class="demo" href="https://crm.cognitas.pt">
+      <div class="demo-n">03</div>
+      <div class="demo-sector" data-pt="Agências · B2B" data-en="Agencies · B2B">Agências · B2B</div>
+      <div class="demo-title" data-pt="CRM que se preenche sozinho" data-en="A CRM that fills itself">CRM que se preenche sozinho</div>
+      <div class="demo-q"
+           data-pt="Os contactos chegam por email, WhatsApp, telefone e formulário. Ficam espalhados, ninguém os regista, e respondem-se tarde."
+           data-en="Enquiries arrive by email, WhatsApp, phone and web form. They scatter, nobody logs them, and replies come late."></div>
+      <div class="demo-a"
+           data-pt="Cada mensagem é lida e transformada em ficha: empresa, necessidade, valor estimado e urgência — já dentro do pipeline."
+           data-en="Every message is read and turned into a record: company, need, estimated value and urgency — already in the pipeline."></div>
+      <div class="demo-tags">
+        <span class="tag">WhatsApp</span><span class="tag">Email</span><span class="tag" data-pt="Transcrição" data-en="Transcription">Transcrição</span><span class="tag">Pipeline</span>
+      </div>
+      <div class="demo-go"><span data-pt="Abrir demonstração" data-en="Open demo">Abrir demonstração</span><span>→</span></div>
+    </a>
+
+    <a class="demo" href="https://faturacao.cognitas.pt">
+      <div class="demo-n">04</div>
+      <div class="demo-sector" data-pt="Distribuição · Construção" data-en="Distribution · Construction">Distribuição · Construção</div>
+      <div class="demo-title" data-pt="Faturação e tesouraria" data-en="Invoicing and cash flow">Faturação e tesouraria</div>
+      <div class="demo-q"
+           data-pt="Faturas feitas à mão no Excel, pagamentos recorrentes controlados de cabeça, e a pergunta de sempre: quanto sobra ao fim do mês?"
+           data-en="Invoices typed by hand in Excel, recurring payments tracked from memory, and the same question every month: what's actually left?"></div>
+      <div class="demo-a"
+           data-pt="Faturas emitidas e comunicadas à AT num clique, recebimentos e pagamentos agendados, saldo previsto sempre à vista."
+           data-en="Invoices issued and filed with the tax authority in one click, payments scheduled, projected balance always visible."></div>
+      <div class="demo-tags">
+        <span class="tag">IVA</span><span class="tag">ATCUD</span><span class="tag" data-pt="Recorrências" data-en="Recurring">Recorrências</span><span class="tag" data-pt="Previsão" data-en="Forecast">Previsão</span>
+      </div>
+      <div class="demo-go"><span data-pt="Abrir demonstração" data-en="Open demo">Abrir demonstração</span><span>→</span></div>
+    </a>
+
+  </div>
+</section>
+
+<section class="strip">
+  <div class="strip-grid">
+    <div>
+      <div class="strip-t" data-pt="Feito à medida, não configurado" data-en="Built to fit, not configured">Feito à medida, não configurado</div>
+      <div class="strip-b" data-pt="Nenhuma destas soluções é um produto de prateleira. Cada uma foi construída à volta do processo que a empresa já tinha."
+           data-en="None of these are off-the-shelf products. Each was built around the process the company already had."></div>
+    </div>
+    <div>
+      <div class="strip-t" data-pt="Semanas, não meses" data-en="Weeks, not months">Semanas, não meses</div>
+      <div class="strip-b" data-pt="Âmbito fixo, preço fixo, prazo acordado à partida. A primeira versão utilizável chega em semanas."
+           data-en="Fixed scope, fixed price, timeline agreed upfront. The first usable version lands in weeks."></div>
+    </div>
+    <div>
+      <div class="strip-t" data-pt="A pessoa decide sempre" data-en="A person always decides">A pessoa decide sempre</div>
+      <div class="strip-b" data-pt="A IA propõe; a sua equipa aprova. A automação total só é ativada quando os resultados o justificarem."
+           data-en="The AI proposes; your team approves. Full automation is only switched on when the results justify it."></div>
+    </div>
+    <div>
+      <div class="strip-t" data-pt="Os dados ficam na Europa" data-en="Your data stays in Europe">Os dados ficam na Europa</div>
+      <div class="strip-b" data-pt="Alojamento em servidores europeus, com exportação integral dos seus dados sempre disponível."
+           data-en="Hosted on European servers, with a full export of your data available at any time."></div>
+    </div>
+  </div>
+</section>
+
+<section class="cta">
+  <div>
+    <div class="cta-t" data-pt="Reconheceu o seu processo<br>em alguma destas?"
+         data-en="Recognised your process<br>in any of these?">Reconheceu o seu processo<br>em alguma destas?</div>
+    <div class="cta-s" data-pt="Trinta minutos chegam para lhe dizermos, honestamente, se dá para automatizar."
+         data-en="Thirty minutes is enough for us to tell you honestly whether it can be automated."></div>
+  </div>
+  <a class="btn-white" href="https://cognitas.pt" data-pt="Falar connosco" data-en="Get in touch">Falar connosco</a>
+</section>
+
+<footer>
+  <span>© 2026 COGNITAS · cognitas.pt</span>
+  <span data-pt="Demonstrações com dados fictícios" data-en="Demos use fictional data">Demonstrações com dados fictícios</span>
+</footer>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   COGNITAS — shared demo helpers
+   Bilingual toggle, toasts, modals, formatting. No backend:
+   every demo is deterministic and runs entirely in the browser.
+   ══════════════════════════════════════════════════════════════ */
+
+let LANG = 'pt';
+
+/* ── i18n ───────────────────────────────────────────────────── */
+function applyLang(lang) {
+  LANG = lang;
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-pt]').forEach(el => {
+    const txt = el.getAttribute('data-' + lang);
+    if (txt == null) return;
+    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.placeholder = txt;
+    else el.innerHTML = txt;
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.lang === lang);
+  });
+  document.dispatchEvent(new CustomEvent('langchange', { detail: lang }));
+}
+function t(pt, en) { return LANG === 'pt' ? pt : en; }
+
+function mountLangToggle(host) {
+  const el = typeof host === 'string' ? document.querySelector(host) : host;
+  if (!el) return;
+  el.innerHTML =
+    '<button class="lang-btn active" data-lang="pt">PT</button>' +
+    '<button class="lang-btn" data-lang="en">EN</button>';
+  el.querySelectorAll('.lang-btn').forEach(b =>
+    b.addEventListener('click', () => applyLang(b.dataset.lang))
+  );
+}
+
+/* ── formatting ─────────────────────────────────────────────── */
+const EUR = n => new Intl.NumberFormat('pt-PT', {
+  style: 'currency', currency: 'EUR', minimumFractionDigits: 2
+}).format(n);
+
+const EUR0 = n => new Intl.NumberFormat('pt-PT', {
+  style: 'currency', currency: 'EUR', maximumFractionDigits: 0
+}).format(n);
+
+const MONTHS_PT = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const MONTHS_EN = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+const DOW_PT = ['dom','seg','ter','qua','qui','sex','sáb'];
+const DOW_EN = ['sun','mon','tue','wed','thu','fri','sat'];
+
+function fmtDate(d) {
+  const M = LANG === 'pt' ? MONTHS_PT : MONTHS_EN;
+  return `${d.getDate()} ${M[d.getMonth()]} ${d.getFullYear()}`;
+}
+function fmtDateShort(d) {
+  const M = LANG === 'pt' ? MONTHS_PT : MONTHS_EN;
+  return `${String(d.getDate()).padStart(2, '0')} ${M[d.getMonth()]}`;
+}
+
+/* ── toasts ─────────────────────────────────────────────────── */
+function toast(msg, kind = 'ok', ms = 4200) {
+  let stack = document.querySelector('.toast-stack');
+  if (!stack) {
+    stack = document.createElement('div');
+    stack.className = 'toast-stack';
+    document.body.appendChild(stack);
+  }
+  const el = document.createElement('div');
+  el.className = 'toast' + (kind === 'info' ? ' info' : '');
+  el.innerHTML = msg;
+  stack.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 260);
+  }, ms);
+}
+
+/* ── overlays ───────────────────────────────────────────────── */
+function openEl(sel)  { document.querySelector(sel)?.classList.add('open'); }
+function closeEl(sel) { document.querySelector(sel)?.classList.remove('open'); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.overlay.open, .drawer-wrap.open')
+      .forEach(el => el.classList.remove('open'));
+  }
+});
+
+/* Click the scrim (but not the panel) to dismiss. */
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('overlay') || e.target.classList.contains('drawer-scrim')) {
+    e.target.closest('.overlay, .drawer-wrap').classList.remove('open');
+  }
+});
+
+/* ── fake async ─────────────────────────────────────────────── */
+/* Demos are deterministic; the delay exists so the UI reads as
+   real work happening rather than an instant state swap. */
+function pretendWork(btn, labelHTML, ms, done) {
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner"></span><span>${labelHTML}</span>`;
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.innerHTML = original;
+    done();
+  }, ms);
+}
+
+/* ── shared brand mark ──────────────────────────────────────── */
+function cognitasLogo(size = 26) {
+  const h = Math.round(size * 0.667);
+  return `<svg width="${size}" height="${h}" viewBox="0 0 36 24" fill="none" aria-label="Cognitas">
+    <circle cx="7" cy="12" r="6.5" fill="#3B5BDB"/>
+    <circle cx="7" cy="12" r="2.5" fill="#0D0D0D"/>
+    <path d="M13.5 12 C17 5.5 21 5.5 24.5 12" stroke="#3B5BDB" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+    <path d="M13.5 12 C17 18.5 21 18.5 24.5 12" stroke="#3B5BDB" stroke-width="0.8" stroke-linecap="round" fill="none" opacity="0.45"/>
+    <circle cx="29" cy="12" r="5.5" stroke="#3B5BDB" stroke-width="1.5" fill="none"/>
+    <circle cx="29" cy="12" r="2" fill="#3B5BDB"/>
+  </svg>`;
+}
+
+/* ── demo banner ────────────────────────────────────────────── */
+function mountBanner() {
+  const b = document.createElement('div');
+  b.className = 'demo-banner';
+  b.innerHTML =
+    `<span data-pt="Demonstração interativa · Dados fictícios"
+           data-en="Interactive demo · Fictional data">Demonstração interativa · Dados fictícios</span>
+     <a href="https://demos.cognitas.pt" data-pt="← Todas as demonstrações" data-en="← All demos">← Todas as demonstrações</a>`;
+  document.body.prepend(b);
+}
+</script>
+<script>
+  document.getElementById('logo').innerHTML = cognitasLogo(28);
+  mountLangToggle('#lang');
+  applyLang('pt');
+</script>
+</body>
+</html>

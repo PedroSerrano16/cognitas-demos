@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRM — Demonstração COGNITAS</title>
+<meta name="description" content="Demonstração interativa: contactos recebidos são lidos, estruturados e seguidos automaticamente.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ── shared COGNITAS demo shell ──────────────────────────────
+   Inlined on purpose: these pages are opened straight from disk
+   as often as they are served, and Safari blocks file:// sub-
+   resources that traverse up a directory. Self-contained pages
+   work everywhere — served, double-clicked, or offline.
+   ──────────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   COGNITAS — shared demo shell
+   Design tokens lifted from cognitas.pt so the demos read as the
+   same product family. Dark-only by design (matches the site).
+   ══════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --black:     oklch(10% 0.008 55);
+  --dark:      oklch(12% 0.008 55);
+  --dark2:     oklch(15% 0.008 55);
+  --dark3:     oklch(18% 0.008 55);
+  --border:    oklch(19% 0.008 55);
+  --border-lt: oklch(24% 0.008 55);
+  --mid:       oklch(44% 0.008 55);
+  --mid-lt:    oklch(56% 0.008 55);
+  --light:     oklch(72% 0.008 55);
+  --white:     oklch(99% 0.004 55);
+
+  --accent:    oklch(45% 0.18 264);
+  --accent-br: oklch(58% 0.16 264);
+  --accent-dim:oklch(45% 0.18 264 / 0.12);
+
+  --ok:        oklch(58% 0.15 150);
+  --warn:      oklch(65% 0.15 65);
+  --bad:       oklch(58% 0.19 25);
+
+  /* Fallbacks matter: these pages are often opened straight from disk,
+     where the Google Fonts request may not resolve. */
+  --f-display: 'Outfit', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif;
+  --f-body:    'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --f-mono:    'DM Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+html { -webkit-font-smoothing: antialiased; }
+body {
+  font-family: var(--f-body);
+  background: var(--black);
+  color: var(--white);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── DEMO BANNER ────────────────────────────────────────────── */
+.demo-banner {
+  position: sticky; top: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 9px 20px;
+  background: oklch(30% 0.13 65); color: oklch(97% 0.02 65);
+  font-family: var(--f-mono); font-size: 10px;
+  letter-spacing: 0.16em; text-transform: uppercase;
+}
+.demo-banner a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.demo-banner-note { opacity: 0.75; letter-spacing: 0.1em; text-transform: none; font-size: 11px; }
+
+/* ── SHELL ──────────────────────────────────────────────────── */
+.shell { display: flex; min-height: calc(100vh - 36px); }
+
+.sidebar {
+  width: 224px; flex-shrink: 0;
+  background: var(--dark); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+}
+.side-brand { padding: 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+.side-brand-sup { font-family: var(--f-mono); font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mid); }
+.side-brand-name { font-family: var(--f-display); font-size: 14px; font-weight: 600; color: var(--white); margin-top: 2px; }
+.side-nav { flex: 1; padding: 14px 12px; display: flex; flex-direction: column; gap: 2px; }
+.side-link {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: 3px;
+  font-size: 13.5px; color: var(--mid); text-decoration: none;
+  cursor: pointer; transition: all 0.15s; border: none; background: none;
+  font-family: var(--f-body); text-align: left; width: 100%;
+}
+.side-link:hover { color: var(--light); background: var(--dark2); }
+.side-link.active { background: var(--accent-dim); color: var(--accent-br); }
+.side-foot { padding: 16px 20px; border-top: 1px solid var(--border); font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: oklch(34% 0.008 55); }
+
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.topbar {
+  height: 58px; flex-shrink: 0; padding: 0 28px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+}
+.topbar-title { font-family: var(--f-display); font-size: 16px; font-weight: 600; }
+.topbar-actions { display: flex; align-items: center; gap: 10px; }
+.content { padding: 28px; flex: 1; }
+
+/* ── LANG TOGGLE ────────────────────────────────────────────── */
+.lang-toggle { display: flex; border: 1px solid var(--border-lt); overflow: hidden; border-radius: 3px; }
+.lang-btn {
+  font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 5px 10px; cursor: pointer; border: none; background: none; color: var(--mid); transition: all 0.15s;
+}
+.lang-btn.active { background: var(--accent); color: var(--white); }
+
+/* ── TYPO ───────────────────────────────────────────────────── */
+.eyebrow { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mid); }
+.h-sec { font-family: var(--f-display); font-size: 15px; font-weight: 600; color: var(--white); }
+.muted { color: var(--mid); }
+.mono { font-family: var(--f-mono); }
+
+/* ── CARD ───────────────────────────────────────────────────── */
+.card { background: var(--dark); border: 1px solid var(--border); border-radius: 4px; }
+.card-head {
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.card-body { padding: 20px; }
+.card-body.flush { padding: 0; }
+
+/* ── STATS ──────────────────────────────────────────────────── */
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 2px; background: var(--border); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 24px; }
+.stat { background: var(--dark); padding: 20px 22px; }
+.stat-label { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mid); }
+.stat-num { font-family: var(--f-display); font-size: 30px; font-weight: 800; letter-spacing: -0.02em; margin-top: 8px; line-height: 1; }
+.stat-num.accent { color: var(--accent-br); }
+.stat-num.ok { color: var(--ok); }
+.stat-num.bad { color: var(--bad); }
+.stat-sub { font-size: 12px; color: var(--mid); margin-top: 6px; font-weight: 300; }
+
+/* ── PILLS ──────────────────────────────────────────────────── */
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px; border-radius: 3px;
+  font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
+  white-space: nowrap;
+}
+.pill::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.pill.mute { color: var(--mid-lt);   background: oklch(22% 0.008 55); }
+.pill.info { color: var(--accent-br); background: oklch(45% 0.18 264 / 0.14); }
+.pill.warn { color: var(--warn);      background: oklch(65% 0.15 65 / 0.13); }
+.pill.ok   { color: var(--ok);        background: oklch(58% 0.15 150 / 0.13); }
+.pill.bad  { color: var(--bad);       background: oklch(58% 0.19 25 / 0.13); }
+
+/* ── BUTTONS ────────────────────────────────────────────────── */
+.btn {
+  font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 10px 18px; border: none; border-radius: 3px; cursor: pointer;
+  transition: all 0.15s; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary { background: var(--accent); color: var(--white); }
+.btn-primary:hover:not(:disabled) { background: var(--accent-br); }
+.btn-ghost { background: none; color: var(--mid-lt); border: 1px solid var(--border-lt); }
+.btn-ghost:hover:not(:disabled) { color: var(--white); border-color: var(--mid); }
+.btn-sm { padding: 6px 12px; font-size: 9.5px; }
+
+/* ── FORM ───────────────────────────────────────────────────── */
+.field { margin-bottom: 16px; }
+.field-label { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); display: block; margin-bottom: 7px; }
+.input, .select, .textarea {
+  width: 100%; background: var(--black); border: 1px solid var(--border-lt); border-radius: 3px;
+  color: var(--white); font-family: var(--f-body); font-size: 13.5px; font-weight: 300;
+  padding: 10px 12px; outline: none; transition: border-color 0.15s;
+}
+.input:focus, .select:focus, .textarea:focus { border-color: var(--accent); }
+.select { cursor: pointer; appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--mid) 50%), linear-gradient(135deg, var(--mid) 50%, transparent 50%); background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 32px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* ── TABLE ──────────────────────────────────────────────────── */
+.tbl-wrap { overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tbl th {
+  text-align: left; padding: 11px 20px; border-bottom: 1px solid var(--border);
+  font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--mid); font-weight: 400; white-space: nowrap;
+}
+.tbl td { padding: 13px 20px; border-bottom: 1px solid oklch(15% 0.008 55); color: var(--light); font-weight: 300; }
+.tbl tbody tr:last-child td { border-bottom: none; }
+.tbl tbody tr.clickable { cursor: pointer; transition: background 0.12s; }
+.tbl tbody tr.clickable:hover { background: var(--dark2); }
+.tbl .num { text-align: right; font-family: var(--f-mono); font-weight: 400; color: var(--white); white-space: nowrap; }
+.tbl .strong { color: var(--white); font-weight: 400; }
+
+/* ── MODAL / DRAWER ─────────────────────────────────────────── */
+.overlay {
+  position: fixed; inset: 0; z-index: 300;
+  background: oklch(5% 0 0 / 0.72); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+  opacity: 0; pointer-events: none; transition: opacity 0.18s;
+}
+.overlay.open { opacity: 1; pointer-events: auto; }
+.modal {
+  background: var(--dark); border: 1px solid var(--border-lt); border-radius: 5px;
+  width: 100%; max-width: 620px; max-height: 88vh; overflow-y: auto;
+  transform: translateY(8px) scale(0.99); transition: transform 0.18s;
+}
+.overlay.open .modal { transform: none; }
+.modal-head { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.modal-title { font-family: var(--f-display); font-size: 17px; font-weight: 600; }
+.modal-body { padding: 24px; }
+.modal-foot { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+.x-btn { background: none; border: none; color: var(--mid); font-size: 20px; cursor: pointer; line-height: 1; padding: 0 4px; }
+.x-btn:hover { color: var(--white); }
+
+.drawer-wrap { position: fixed; inset: 0; z-index: 300; pointer-events: none; }
+.drawer-wrap.open { pointer-events: auto; }
+.drawer-scrim { position: absolute; inset: 0; background: oklch(5% 0 0 / 0.6); opacity: 0; transition: opacity 0.2s; }
+.drawer-wrap.open .drawer-scrim { opacity: 1; }
+.drawer {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 420px; max-width: 92vw;
+  background: var(--dark); border-left: 1px solid var(--border-lt);
+  transform: translateX(100%); transition: transform 0.24s cubic-bezier(0.4,0,0.2,1);
+  display: flex; flex-direction: column;
+}
+.drawer-wrap.open .drawer { transform: none; }
+.drawer-head { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.drawer-body { padding: 24px; overflow-y: auto; flex: 1; }
+
+/* ── TIMELINE ───────────────────────────────────────────────── */
+.tl { position: relative; padding-left: 22px; }
+.tl::before { content: ''; position: absolute; left: 4px; top: 6px; bottom: 6px; width: 1px; background: var(--border-lt); }
+.tl-item { position: relative; padding-bottom: 20px; }
+.tl-item:last-child { padding-bottom: 0; }
+.tl-item::before { content: ''; position: absolute; left: -22px; top: 5px; width: 9px; height: 9px; border-radius: 50%; background: var(--dark); border: 1.5px solid var(--border-lt); }
+.tl-item.accent::before { background: var(--accent); border-color: var(--accent); }
+.tl-when { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mid); }
+.tl-what { font-size: 13.5px; color: var(--light); margin-top: 4px; font-weight: 300; }
+
+/* ── SPINNER / TOAST ────────────────────────────────────────── */
+.spinner {
+  width: 13px; height: 13px; border: 1.5px solid oklch(100% 0 0 / 0.28);
+  border-top-color: var(--white); border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.toast-stack { position: fixed; bottom: 24px; right: 24px; z-index: 400; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+.toast {
+  background: var(--dark2); border: 1px solid var(--border-lt); border-left: 2px solid var(--ok);
+  border-radius: 3px; padding: 13px 18px; font-size: 13px; color: var(--light);
+  box-shadow: 0 8px 28px oklch(0% 0 0 / 0.5);
+  animation: toast-in 0.25s cubic-bezier(0.2,0,0.2,1);
+  max-width: 340px;
+}
+.toast.info { border-left-color: var(--accent); }
+@keyframes toast-in { from { opacity: 0; transform: translateX(16px); } }
+.toast.out { opacity: 0; transform: translateX(16px); transition: all 0.25s; }
+
+/* ── MISC ───────────────────────────────────────────────────── */
+.flash { animation: flash 1.8s ease-out; }
+@keyframes flash {
+  0%, 30% { background: oklch(45% 0.18 264 / 0.3); box-shadow: 0 0 0 1px var(--accent); }
+  100%    { background: transparent; box-shadow: none; }
+}
+.empty { padding: 48px 20px; text-align: center; color: var(--mid); font-size: 13px; font-weight: 300; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+/* Without this, a wide child (the calendar's 620px min-width) inflates the
+   shared track instead of scrolling inside its own overflow container. */
+.grid-2 > * { min-width: 0; }
+.src-icon { width: 20px; height: 20px; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+
+@media (max-width: 1080px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+}
+</style>
+<style>
+  .board { display: grid; grid-template-columns: repeat(5, minmax(212px, 1fr)); gap: 2px; background: var(--border); border: 1px solid var(--border); border-radius: 4px; overflow-x: auto; }
+  .col { background: var(--dark); min-height: 420px; display: flex; flex-direction: column; }
+  .col-head { padding: 13px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .col-name { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); }
+  .col-count { font-family: var(--f-mono); font-size: 10px; color: var(--mid-lt); background: var(--dark3); border-radius: 10px; padding: 1px 7px; }
+  .col-body { padding: 10px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+
+  .lead {
+    background: var(--dark2); border: 1px solid var(--border); border-radius: 3px;
+    padding: 11px 12px; cursor: pointer; transition: all 0.14s;
+  }
+  .lead:hover { border-color: var(--mid); transform: translateY(-1px); }
+  .lead-co { font-family: var(--f-display); font-size: 13px; font-weight: 600; color: var(--white); line-height: 1.25; }
+  .lead-need { font-size: 11.5px; color: var(--mid); font-weight: 300; margin-top: 4px; line-height: 1.4; }
+  .lead-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; gap: 8px; }
+  .lead-val { font-family: var(--f-mono); font-size: 11px; color: var(--light); }
+  .src {
+    width: 19px; height: 19px; border-radius: 3px; display: inline-flex;
+    align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0;
+    background: var(--dark3);
+  }
+
+  .extract { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; background: var(--border); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .extract-side { background: var(--black); padding: 18px; }
+  .raw {
+    font-family: var(--f-mono); font-size: 11.5px; line-height: 1.7; color: var(--mid-lt);
+    white-space: pre-wrap; font-weight: 300;
+  }
+  .xf { padding: 9px 0; border-bottom: 1px solid oklch(15% 0.008 55); opacity: 0; transform: translateY(4px); }
+  .xf:last-child { border-bottom: none; }
+  .xf.in { animation: xf-in 0.34s cubic-bezier(0.2,0,0.2,1) forwards; }
+  @keyframes xf-in { to { opacity: 1; transform: none; } }
+  .xf-k { font-family: var(--f-mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); }
+  .xf-v { font-size: 13.5px; color: var(--white); margin-top: 3px; font-weight: 300; }
+
+  .kv { display: grid; grid-template-columns: 96px 1fr; gap: 9px 14px; font-size: 13px; align-items: baseline; }
+  .kv .eyebrow { padding-top: 2px; }
+  @media (max-width: 900px) { .extract { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="sidebar">
+    <div class="side-brand">
+      <span id="logo"></span>
+      <div>
+        <div class="side-brand-sup">Cognitas.</div>
+        <div class="side-brand-name">Atlântica Studio</div>
+      </div>
+    </div>
+    <nav class="side-nav">
+      <button class="side-link active">🎯 <span data-pt="Pipeline" data-en="Pipeline">Pipeline</span></button>
+      <button class="side-link" onclick="notInDemo()">🏢 <span data-pt="Empresas" data-en="Companies">Empresas</span></button>
+      <button class="side-link" onclick="notInDemo()">✉️ <span data-pt="Caixa de entrada" data-en="Inbox">Caixa de entrada</span></button>
+      <button class="side-link" onclick="notInDemo()">📊 <span data-pt="Relatórios" data-en="Reports">Relatórios</span></button>
+    </nav>
+    <div class="side-foot">Demo · v1.0</div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-title" data-pt="Pipeline comercial" data-en="Sales pipeline">Pipeline comercial</div>
+      <div class="topbar-actions">
+        <button class="btn btn-primary btn-sm" id="simBtn"
+                data-pt="⚡ Simular contacto recebido" data-en="⚡ Simulate an inbound message">⚡ Simular contacto recebido</button>
+        <div class="lang-toggle" id="lang"></div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="stat-row">
+        <div class="stat">
+          <div class="stat-label" data-pt="Contactos este mês" data-en="Inbound this month">Contactos este mês</div>
+          <div class="stat-num" id="statLeads">10</div>
+          <div class="stat-sub" data-pt="Todos capturados automaticamente" data-en="All captured automatically">Todos capturados automaticamente</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label" data-pt="Tempo médio de resposta" data-en="Avg. response time">Tempo médio de resposta</div>
+          <div class="stat-num accent">4 min</div>
+          <div class="stat-sub" data-pt="Antes: 1 dia e meio" data-en="Before: 1.5 days">Antes: 1 dia e meio</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label" data-pt="Taxa de conversão" data-en="Conversion rate">Taxa de conversão</div>
+          <div class="stat-num ok">31%</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label" data-pt="Valor em pipeline" data-en="Pipeline value">Valor em pipeline</div>
+          <div class="stat-num" id="statValue">€0</div>
+        </div>
+      </div>
+
+      <div class="board" id="board"></div>
+
+      <p class="muted" style="font-size:12.5px; margin-top:16px; font-weight:300; max-width:640px;"
+         data-pt="Cada contacto que chega por email, WhatsApp, telefone ou formulário do site é lido, estruturado e colocado no pipeline sem ninguém copiar nada à mão. Carregue em <b>Simular contacto recebido</b> para ver o processo."
+         data-en="Every message arriving by email, WhatsApp, phone or website form is read, structured and placed in the pipeline without anyone copying anything by hand. Hit <b>Simulate an inbound message</b> to watch it happen.">
+      </p>
+    </div>
+  </main>
+</div>
+
+<!-- ── extraction modal ─────────────────────────────────────── -->
+<div class="overlay" id="simModal">
+  <div class="modal" style="max-width:820px;">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" data-pt="Novo contacto recebido" data-en="New inbound message">Novo contacto recebido</div>
+        <div class="eyebrow" style="margin-top:4px;" id="simSrc"></div>
+      </div>
+      <button class="x-btn" onclick="closeEl('#simModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="extract">
+        <div class="extract-side">
+          <div class="eyebrow" style="margin-bottom:12px;" data-pt="Mensagem original" data-en="Original message">Mensagem original</div>
+          <div class="raw" id="simRaw"></div>
+        </div>
+        <div class="extract-side">
+          <div class="eyebrow" style="margin-bottom:6px;" data-pt="Dados extraídos" data-en="Extracted data">Dados extraídos</div>
+          <div id="simFields"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeEl('#simModal')" data-pt="Fechar" data-en="Close">Fechar</button>
+      <button class="btn btn-primary" id="addBtn" disabled data-pt="Adicionar ao pipeline" data-en="Add to pipeline">Adicionar ao pipeline</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── lead drawer ──────────────────────────────────────────── -->
+<div class="drawer-wrap" id="leadDrawer">
+  <div class="drawer-scrim"></div>
+  <div class="drawer">
+    <div class="drawer-head">
+      <div id="drawerHead"></div>
+      <button class="x-btn" onclick="closeEl('#leadDrawer')">×</button>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   COGNITAS — shared demo helpers
+   Bilingual toggle, toasts, modals, formatting. No backend:
+   every demo is deterministic and runs entirely in the browser.
+   ══════════════════════════════════════════════════════════════ */
+
+let LANG = 'pt';
+
+/* ── i18n ───────────────────────────────────────────────────── */
+function applyLang(lang) {
+  LANG = lang;
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-pt]').forEach(el => {
+    const txt = el.getAttribute('data-' + lang);
+    if (txt == null) return;
+    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.placeholder = txt;
+    else el.innerHTML = txt;
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.lang === lang);
+  });
+  document.dispatchEvent(new CustomEvent('langchange', { detail: lang }));
+}
+function t(pt, en) { return LANG === 'pt' ? pt : en; }
+
+function mountLangToggle(host) {
+  const el = typeof host === 'string' ? document.querySelector(host) : host;
+  if (!el) return;
+  el.innerHTML =
+    '<button class="lang-btn active" data-lang="pt">PT</button>' +
+    '<button class="lang-btn" data-lang="en">EN</button>';
+  el.querySelectorAll('.lang-btn').forEach(b =>
+    b.addEventListener('click', () => applyLang(b.dataset.lang))
+  );
+}
+
+/* ── formatting ─────────────────────────────────────────────── */
+const EUR = n => new Intl.NumberFormat('pt-PT', {
+  style: 'currency', currency: 'EUR', minimumFractionDigits: 2
+}).format(n);
+
+const EUR0 = n => new Intl.NumberFormat('pt-PT', {
+  style: 'currency', currency: 'EUR', maximumFractionDigits: 0
+}).format(n);
+
+const MONTHS_PT = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const MONTHS_EN = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+const DOW_PT = ['dom','seg','ter','qua','qui','sex','sáb'];
+const DOW_EN = ['sun','mon','tue','wed','thu','fri','sat'];
+
+function fmtDate(d) {
+  const M = LANG === 'pt' ? MONTHS_PT : MONTHS_EN;
+  return `${d.getDate()} ${M[d.getMonth()]} ${d.getFullYear()}`;
+}
+function fmtDateShort(d) {
+  const M = LANG === 'pt' ? MONTHS_PT : MONTHS_EN;
+  return `${String(d.getDate()).padStart(2, '0')} ${M[d.getMonth()]}`;
+}
+
+/* ── toasts ─────────────────────────────────────────────────── */
+function toast(msg, kind = 'ok', ms = 4200) {
+  let stack = document.querySelector('.toast-stack');
+  if (!stack) {
+    stack = document.createElement('div');
+    stack.className = 'toast-stack';
+    document.body.appendChild(stack);
+  }
+  const el = document.createElement('div');
+  el.className = 'toast' + (kind === 'info' ? ' info' : '');
+  el.innerHTML = msg;
+  stack.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 260);
+  }, ms);
+}
+
+/* ── overlays ───────────────────────────────────────────────── */
+function openEl(sel)  { document.querySelector(sel)?.classList.add('open'); }
+function closeEl(sel) { document.querySelector(sel)?.classList.remove('open'); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.overlay.open, .drawer-wrap.open')
+      .forEach(el => el.classList.remove('open'));
+  }
+});
+
+/* Click the scrim (but not the panel) to dismiss. */
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('overlay') || e.target.classList.contains('drawer-scrim')) {
+    e.target.closest('.overlay, .drawer-wrap').classList.remove('open');
+  }
+});
+
+/* ── fake async ─────────────────────────────────────────────── */
+/* Demos are deterministic; the delay exists so the UI reads as
+   real work happening rather than an instant state swap. */
+function pretendWork(btn, labelHTML, ms, done) {
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner"></span><span>${labelHTML}</span>`;
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.innerHTML = original;
+    done();
+  }, ms);
+}
+
+/* ── shared brand mark ──────────────────────────────────────── */
+function cognitasLogo(size = 26) {
+  const h = Math.round(size * 0.667);
+  return `<svg width="${size}" height="${h}" viewBox="0 0 36 24" fill="none" aria-label="Cognitas">
+    <circle cx="7" cy="12" r="6.5" fill="#3B5BDB"/>
+    <circle cx="7" cy="12" r="2.5" fill="#0D0D0D"/>
+    <path d="M13.5 12 C17 5.5 21 5.5 24.5 12" stroke="#3B5BDB" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+    <path d="M13.5 12 C17 18.5 21 18.5 24.5 12" stroke="#3B5BDB" stroke-width="0.8" stroke-linecap="round" fill="none" opacity="0.45"/>
+    <circle cx="29" cy="12" r="5.5" stroke="#3B5BDB" stroke-width="1.5" fill="none"/>
+    <circle cx="29" cy="12" r="2" fill="#3B5BDB"/>
+  </svg>`;
+}
+
+/* ── demo banner ────────────────────────────────────────────── */
+function mountBanner() {
+  const b = document.createElement('div');
+  b.className = 'demo-banner';
+  b.innerHTML =
+    `<span data-pt="Demonstração interativa · Dados fictícios"
+           data-en="Interactive demo · Fictional data">Demonstração interativa · Dados fictícios</span>
+     <a href="https://demos.cognitas.pt" data-pt="← Todas as demonstrações" data-en="← All demos">← Todas as demonstrações</a>`;
+  document.body.prepend(b);
+}
+</script>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   Atlântica Studio — fictional design & web agency, Porto.
+   Every company, person and figure below is invented.
+   ══════════════════════════════════════════════════════════════ */
+
+const STAGES = [
+  { id: 'novo',       pt: 'Novo',        en: 'New' },
+  { id: 'contactado', pt: 'Contactado',  en: 'Contacted' },
+  { id: 'qualificado',pt: 'Qualificado', en: 'Qualified' },
+  { id: 'proposta',   pt: 'Proposta',    en: 'Proposal' },
+  { id: 'ganho',      pt: 'Ganho',       en: 'Won' }
+];
+
+const SRC = {
+  email:    { icon: '✉️', pt: 'Email',              en: 'Email' },
+  site:     { icon: '🌐', pt: 'Formulário do site',  en: 'Website form' },
+  whatsapp: { icon: '💬', pt: 'WhatsApp',            en: 'WhatsApp' },
+  telefone: { icon: '📞', pt: 'Chamada transcrita',  en: 'Transcribed call' },
+  linkedin: { icon: '💼', pt: 'LinkedIn',            en: 'LinkedIn' }
+};
+
+let LEADS = [
+  { co: 'Padaria Central, Lda.', person: 'Marta Vieira', mail: 'marta@padariacentral.pt',
+    needPt: 'Site novo com encomendas online', needEn: 'New site with online ordering',
+    value: 4200, src: 'site', stage: 'novo', when: 'há 2 h',
+    tl: [['há 2 h','Formulário submetido no site'],['há 2 h','Ficha criada automaticamente'],['há 1 h','Email de resposta automática enviado']] },
+
+  { co: 'Óptica Lisboa', person: 'Rui Cabral', mail: 'geral@opticalisboa.pt',
+    needPt: 'Campanha de redes sociais', needEn: 'Social media campaign',
+    value: 1800, src: 'whatsapp', stage: 'novo', when: 'há 5 h',
+    tl: [['há 5 h','Mensagem recebida por WhatsApp'],['há 5 h','Ficha criada automaticamente']] },
+
+  { co: 'Ginásio Pulse', person: 'Sara Meireles', mail: 'sara@pulsegym.pt',
+    needPt: 'Rebranding completo', needEn: 'Full rebrand',
+    value: 7500, src: 'email', stage: 'contactado', when: 'há 2 dias',
+    tl: [['há 2 dias','Email recebido'],['há 2 dias','Ficha criada automaticamente'],['ontem','Chamada de 20 min — interessados'],['ontem','Reunião agendada para 6ª feira']] },
+
+  { co: 'Talho do Bairro', person: 'António Seixas', mail: 'talhodobairro@mail.pt',
+    needPt: 'Loja online + entregas', needEn: 'Online shop + delivery',
+    value: 5400, src: 'telefone', stage: 'contactado', when: 'há 3 dias',
+    tl: [['há 3 dias','Chamada recebida e transcrita'],['há 3 dias','Ficha criada automaticamente'],['há 2 dias','Proposta preliminar enviada']] },
+
+  { co: 'Hotel Ribamar', person: 'Cristina Paiva', mail: 'c.paiva@hotelribamar.pt',
+    needPt: 'Site multilingue + motor de reservas', needEn: 'Multilingual site + booking engine',
+    value: 12800, src: 'email', stage: 'qualificado', when: 'há 6 dias',
+    tl: [['há 6 dias','Email recebido'],['há 5 dias','Reunião de diagnóstico'],['há 3 dias','Orçamento validado internamente'],['há 1 dia','Aguarda decisão da administração']] },
+
+  { co: 'Auto Matos, Lda.', person: 'Jorge Matos', mail: 'jorge@automatos.pt',
+    needPt: 'Sistema de marcações de oficina', needEn: 'Workshop booking system',
+    value: 6100, src: 'site', stage: 'qualificado', when: 'há 8 dias',
+    tl: [['há 8 dias','Formulário submetido'],['há 7 dias','Chamada de qualificação'],['há 4 dias','Requisitos recolhidos']] },
+
+  { co: 'Clínica Dentária Sorriso', person: 'Dra. Helena Braga', mail: 'geral@clinicasorriso.pt',
+    needPt: 'Portal de pacientes', needEn: 'Patient portal',
+    value: 9400, src: 'email', stage: 'proposta', when: 'há 12 dias',
+    tl: [['há 12 dias','Email recebido'],['há 10 dias','Reunião presencial'],['há 4 dias','Proposta formal enviada'],['há 1 dia','Follow-up automático enviado']] },
+
+  { co: 'Livraria do Rossio', person: 'Miguel Nogueira', mail: 'miguel@livrariadorossio.pt',
+    needPt: 'Catálogo digital + newsletter', needEn: 'Digital catalogue + newsletter',
+    value: 3300, src: 'linkedin', stage: 'proposta', when: 'há 9 dias',
+    tl: [['há 9 dias','Mensagem no LinkedIn'],['há 8 dias','Ficha criada automaticamente'],['há 5 dias','Proposta enviada']] },
+
+  { co: 'Quinta do Vale', person: 'Teresa Amaral', mail: 'teresa@quintadovale.pt',
+    needPt: 'Site de enoturismo + reservas', needEn: 'Wine tourism site + bookings',
+    value: 8700, src: 'site', stage: 'ganho', when: 'há 3 semanas',
+    tl: [['há 3 semanas','Formulário submetido'],['há 3 semanas','Proposta enviada'],['há 1 semana','Proposta aceite ✓'],['há 4 dias','Projeto iniciado']] },
+
+  { co: 'Café Império', person: 'Nelson Faria', mail: 'imperio.cafe@mail.pt',
+    needPt: 'Identidade visual + menus', needEn: 'Visual identity + menus',
+    value: 2600, src: 'whatsapp', stage: 'ganho', when: 'há 1 mês',
+    tl: [['há 1 mês','Mensagem por WhatsApp'],['há 3 semanas','Proposta aceite ✓'],['há 2 semanas','Entrega final']] }
+];
+
+/* Queue of inbound messages the simulate button walks through. */
+const INBOX = [
+  { src: 'email',
+    rawPt: `De: geral@gelatariapolonorte.pt
+Assunto: Pedido de orçamento
+
+Boa tarde,
+
+Somos uma gelataria com três lojas no Porto e queríamos
+começar a vender online, com entrega ao domicílio.
+Precisávamos de um site e de uma forma simples de gerir
+as encomendas.
+
+Temos alguma urgência — gostávamos de ter isto a
+funcionar antes do verão. Que valores praticam?
+
+Cumprimentos,
+Sandra Oliveira
+Gelataria Polo Norte`,
+    rawEn: `From: geral@gelatariapolonorte.pt
+Subject: Quote request
+
+Good afternoon,
+
+We're an ice cream shop with three stores in Porto and we'd
+like to start selling online, with home delivery. We'd need
+a website and a simple way to manage the orders.
+
+It's a little urgent — we'd like this running before summer.
+What are your rates?
+
+Best regards,
+Sandra Oliveira
+Gelataria Polo Norte`,
+    co: 'Gelataria Polo Norte', person: 'Sandra Oliveira', mail: 'geral@gelatariapolonorte.pt',
+    needPt: 'Loja online com entrega ao domicílio', needEn: 'Online shop with home delivery',
+    value: 6800, urgPt: 'Alta — prazo antes do verão', urgEn: 'High — deadline before summer' },
+
+  { src: 'whatsapp',
+    rawPt: `Floricultura Íris · WhatsApp Business
+
+Olá! Vi o vosso trabalho no site da Quinta do Vale
+e gostei muito.
+
+Temos uma floricultura em Braga e recebemos as
+encomendas todas por telefone e WhatsApp — é um
+caos, perdemos pedidos.
+
+Conseguem fazer alguma coisa que organize isto?
+Obrigada, Luísa Antunes`,
+    rawEn: `Floricultura Íris · WhatsApp Business
+
+Hi! I saw your work on the Quinta do Vale site
+and really liked it.
+
+We run a flower shop in Braga and we take all our
+orders by phone and WhatsApp — it's chaos, we lose
+orders.
+
+Can you build something to organise this?
+Thanks, Luísa Antunes`,
+    co: 'Floricultura Íris', person: 'Luísa Antunes', mail: '+351 9•• ••• •••',
+    needPt: 'Centralizar encomendas de telefone e WhatsApp', needEn: 'Centralise phone and WhatsApp orders',
+    value: 4500, urgPt: 'Média', urgEn: 'Medium' },
+
+  { src: 'site',
+    rawPt: `Formulário de contacto — atlanticastudio.pt
+
+Nome: Paulo Sá
+Empresa: Transportes Sá & Filhos, Lda.
+Email: paulo@transportessa.pt
+Telefone: 253 •••  •••
+
+Mensagem:
+Bom dia. Temos 14 viaturas e passamos a semana a
+emitir guias e faturas à mão no Excel. Alguém nos
+falou de vocês. Queremos perceber se é possível
+automatizar e quanto custa. Somos 22 pessoas.`,
+    rawEn: `Contact form — atlanticastudio.pt
+
+Name: Paulo Sá
+Company: Transportes Sá & Filhos, Lda.
+Email: paulo@transportessa.pt
+Phone: 253 ••• •••
+
+Message:
+Good morning. We have 14 vehicles and spend the week
+issuing delivery notes and invoices by hand in Excel.
+Someone mentioned you. We want to understand whether
+this can be automated and what it costs. We're 22 people.`,
+    co: 'Transportes Sá & Filhos, Lda.', person: 'Paulo Sá', mail: 'paulo@transportessa.pt',
+    needPt: 'Automatizar guias de transporte e faturação', needEn: 'Automate delivery notes and invoicing',
+    value: 11200, urgPt: 'Média — sem prazo indicado', urgEn: 'Medium — no deadline given' },
+
+  { src: 'telefone',
+    rawPt: `Chamada recebida · 11:42 · 3 min 18 s
+Transcrição automática
+
+"…bom dia, é da Escola de Condução Avante.
+Olhe, o nosso problema é as marcações das aulas
+de condução. Temos seis instrutores e é tudo num
+caderno. Os alunos ligam, às vezes não há ninguém
+na secretaria, perdemos marcações.
+
+Queríamos uma coisa em que o aluno marcasse
+sozinho pelo telemóvel. É possível?"`,
+    rawEn: `Inbound call · 11:42 · 3 min 18 s
+Automatic transcription
+
+"…good morning, this is Escola de Condução Avante.
+Our problem is booking driving lessons. We have six
+instructors and it's all in a paper notebook. Students
+call, sometimes nobody's at the desk, we lose bookings.
+
+We'd like something where the student books by
+themselves on their phone. Is that possible?"`,
+    co: 'Escola de Condução Avante', person: 'Recepção', mail: 'avante.conducao@mail.pt',
+    needPt: 'Marcações de aulas self-service para alunos', needEn: 'Self-service lesson booking for students',
+    value: 5900, urgPt: 'Alta — perdem marcações agora', urgEn: 'High — losing bookings today' }
+];
+
+let inboxIdx = 0, pending = null;
+
+/* ── board ──────────────────────────────────────────────────── */
+function renderBoard() {
+  document.getElementById('board').innerHTML = STAGES.map(st => {
+    const items = LEADS.filter(l => l.stage === st.id);
+    return `<div class="col">
+      <div class="col-head">
+        <span class="col-name">${t(st.pt, st.en)}</span>
+        <span class="col-count">${items.length}</span>
+      </div>
+      <div class="col-body">
+        ${items.map(l => `
+          <div class="lead ${l.isNew ? 'flash' : ''}" onclick="openLead('${l.co.replace(/'/g, "\\'")}')">
+            <div class="lead-co">${l.co}</div>
+            <div class="lead-need">${t(l.needPt, l.needEn)}</div>
+            <div class="lead-foot">
+              <span class="src" title="${t(SRC[l.src].pt, SRC[l.src].en)}">${SRC[l.src].icon}</span>
+              <span class="lead-val">${EUR0(l.value)}</span>
+            </div>
+          </div>`).join('') || `<div class="empty" style="padding:22px 8px; font-size:12px;">—</div>`}
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('statLeads').textContent = LEADS.length;
+  document.getElementById('statValue').textContent =
+    EUR0(LEADS.filter(l => l.stage !== 'ganho').reduce((s, l) => s + l.value, 0));
+}
+
+/* ── lead drawer ────────────────────────────────────────────── */
+function openLead(co) {
+  const l = LEADS.find(x => x.co === co);
+  if (!l) return;
+  const st = STAGES.find(s => s.id === l.stage);
+  const cls = { novo: 'mute', contactado: 'info', qualificado: 'info', proposta: 'warn', ganho: 'ok' }[l.stage];
+
+  document.getElementById('drawerHead').innerHTML = `
+    <div style="font-family:var(--f-display); font-size:19px; font-weight:700; line-height:1.2;">${l.co}</div>
+    <div style="margin-top:8px;"><span class="pill ${cls}">${t(st.pt, st.en)}</span></div>`;
+
+  const idx = STAGES.findIndex(s => s.id === l.stage);
+
+  document.getElementById('drawerBody').innerHTML = `
+    <div class="kv" style="margin-bottom:24px;">
+      <span class="eyebrow">${t('Contacto','Contact')}</span><span>${l.person}</span>
+      <span class="eyebrow">${t('Email','Email')}</span><span style="word-break:break-all;">${l.mail}</span>
+      <span class="eyebrow">${t('Origem','Source')}</span><span>${SRC[l.src].icon} ${t(SRC[l.src].pt, SRC[l.src].en)}</span>
+      <span class="eyebrow">${t('Recebido','Received')}</span><span>${l.when}</span>
+      <span class="eyebrow">${t('Valor est.','Est. value')}</span><span class="mono">${EUR(l.value)}</span>
+    </div>
+
+    <div class="eyebrow" style="margin-bottom:8px;">${t('Necessidade identificada','Identified need')}</div>
+    <div style="background:var(--black); border:1px solid var(--border); border-left:2px solid var(--accent);
+                border-radius:3px; padding:13px 15px; font-size:13.5px; font-weight:300; color:var(--light);
+                margin-bottom:26px; line-height:1.6;">${t(l.needPt, l.needEn)}</div>
+
+    <div class="eyebrow" style="margin-bottom:14px;">${t('Histórico','Activity')}</div>
+    <div class="tl">
+      ${l.tl.map((e, i) => `
+        <div class="tl-item ${i === l.tl.length - 1 ? 'accent' : ''}">
+          <div class="tl-when">${e[0]}</div>
+          <div class="tl-what">${e[1]}</div>
+        </div>`).join('')}
+    </div>
+
+    ${idx < STAGES.length - 1 ? `
+      <button class="btn btn-primary" style="width:100%; margin-top:26px;"
+              onclick="advance('${l.co.replace(/'/g, "\\'")}')">
+        ${t('Avançar para', 'Move to')} ${t(STAGES[idx + 1].pt, STAGES[idx + 1].en)} →
+      </button>` : `
+      <div style="margin-top:26px; text-align:center;" class="muted">
+        ${t('Negócio fechado 🎉','Deal closed 🎉')}</div>`}`;
+
+  openEl('#leadDrawer');
+}
+
+function advance(co) {
+  const l = LEADS.find(x => x.co === co);
+  const idx = STAGES.findIndex(s => s.id === l.stage);
+  if (idx >= STAGES.length - 1) return;
+  l.stage = STAGES[idx + 1].id;
+  l.isNew = true;
+  setTimeout(() => { l.isNew = false; }, 2000);
+  closeEl('#leadDrawer');
+  renderBoard();
+  toast(`<b>${l.co}</b><br>${t('movido para','moved to')} ${t(STAGES[idx + 1].pt, STAGES[idx + 1].en)}`, 'info');
+}
+
+/* ── simulate inbound ───────────────────────────────────────── */
+document.getElementById('simBtn').addEventListener('click', function () {
+  pending = INBOX[inboxIdx % INBOX.length];
+  inboxIdx++;
+
+  document.getElementById('simSrc').textContent = t(SRC[pending.src].pt, SRC[pending.src].en);
+  document.getElementById('simRaw').textContent = t(pending.rawPt, pending.rawEn);
+  document.getElementById('addBtn').disabled = true;
+
+  const box = document.getElementById('simFields');
+  box.innerHTML = `<div style="display:flex; align-items:center; gap:9px; padding:16px 0; color:var(--mid);">
+      <span class="spinner"></span>
+      <span style="font-size:13px;">${t('A analisar mensagem…','Reading the message…')}</span>
+    </div>`;
+
+  openEl('#simModal');
+
+  setTimeout(() => {
+    const rows = [
+      [t('Empresa','Company'),        pending.co],
+      [t('Pessoa de contacto','Contact person'), pending.person],
+      [t('Email / telefone','Email / phone'),    pending.mail],
+      [t('Necessidade','Need'),       t(pending.needPt, pending.needEn)],
+      [t('Valor estimado','Estimated value'),    EUR0(pending.value)],
+      [t('Urgência','Urgency'),       t(pending.urgPt, pending.urgEn)]
+    ];
+    box.innerHTML = rows.map(r =>
+      `<div class="xf"><div class="xf-k">${r[0]}</div><div class="xf-v">${r[1]}</div></div>`).join('');
+    /* Stagger the reveal so it reads as extraction, not a page load. */
+    box.querySelectorAll('.xf').forEach((el, i) =>
+      setTimeout(() => el.classList.add('in'), i * 130));
+    setTimeout(() => { document.getElementById('addBtn').disabled = false; }, rows.length * 130 + 200);
+  }, 1500);
+});
+
+document.getElementById('addBtn').addEventListener('click', function () {
+  if (!pending) return;
+  LEADS.forEach(l => delete l.isNew);
+  LEADS.unshift({
+    co: pending.co, person: pending.person, mail: pending.mail,
+    needPt: pending.needPt, needEn: pending.needEn,
+    value: pending.value, src: pending.src, stage: 'novo',
+    when: t('agora','just now'), isNew: true,
+    tl: [[t('agora','just now'), t('Mensagem recebida','Message received')],
+         [t('agora','just now'), t('Ficha criada automaticamente','Record created automatically')]]
+  });
+  closeEl('#simModal');
+  renderBoard();
+  toast(`<b>${pending.co}</b><br>${t('adicionado ao pipeline','added to the pipeline')}`);
+  setTimeout(() => toast(t('Resposta automática enviada ao cliente ✓','Automatic reply sent to the client ✓'), 'info'), 800);
+  pending = null;
+});
+
+function notInDemo() {
+  toast(t('Esta secção existe na versão completa — a demonstração cobre apenas o pipeline.',
+          'This section exists in the full product — the demo covers the pipeline only.'), 'info');
+}
+
+/* ── boot ───────────────────────────────────────────────────── */
+document.getElementById('logo').innerHTML = cognitasLogo(26);
+mountBanner();
+mountLangToggle('#lang');
+document.addEventListener('langchange', renderBoard);
+renderBoard();
+applyLang('pt');
+</script>
+</body>
+</html>
