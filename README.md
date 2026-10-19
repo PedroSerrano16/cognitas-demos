@@ -6,7 +6,7 @@ backend, no data: every page is a single self-contained HTML file with its CSS a
 | Host | Serves | Source |
 |---|---|---|
 | `demos.cognitas.pt` | index — links to all four | `index.html` |
-| `agenda.cognitas.pt` | online booking demo | `agenda/index.html` |
+| `agenda.cognitas.pt` | **not a demo** — static mirror of www.cetomanota.com | `agenda/` |
 | `crm.cognitas.pt` | self-filling CRM demo | `crm/index.html` |
 | `faturacao.cognitas.pt` | invoicing & cash flow demo | `faturacao/index.html` |
 
@@ -95,3 +95,19 @@ certbot has succeeded, or the very first deploy will report failure on a checkou
 
 Open the file, edit, push. Text carries both languages inline via `data-pt` / `data-en` attributes
 and a toggle in the page — if you add copy, add both or the language switch will leave gaps.
+
+## agenda.cognitas.pt is a mirror of cetomanota.com
+
+The booking demo was retired. `agenda/` is now a static copy of the Toma Nota site
+(prerendered Next.js, originally on Vercel), produced by
+[`deploy/mirror-cetomanota.py`](deploy/mirror-cetomanota.py). To refresh it:
+
+```bash
+python3 -I deploy/mirror-cetomanota.py /tmp/ctn-site
+for f in /tmp/ctn-site/icons/*.png; do sips -Z 768 "$f"; done   # originals are 13-24 MB each
+rm -rf agenda && cp -a /tmp/ctn-site agenda && rm agenda/robots.txt agenda/sitemap.xml
+```
+
+Its server block differs from the others: `$uri.html` in `try_files`, a `/_next/image` location
+that serves the `_img/` symlinks, and `/api/inscricao` **proxied to the original Vercel
+backend**. The enrolment form stops working the day that backend is switched off.
